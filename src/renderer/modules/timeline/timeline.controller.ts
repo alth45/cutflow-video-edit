@@ -148,6 +148,7 @@ export function attachTimelineController(view: TimelineView): () => void {
 
         if (toggle === "hidden") actions.toggleTrackHidden(trackId);
         else if (toggle === "locked") actions.toggleTrackLocked(trackId);
+        else if (toggle === "locked") actions.toggleTrackLocked(trackId);
       },
     ),
   );

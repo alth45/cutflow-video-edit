@@ -11,7 +11,11 @@
    ============================================================ */
 
 import type { InspectorPanelTab } from "@shared/types/state";
-import type { ClipTransform, ClipColor } from "@shared/types/timeline";
+import type {
+  ClipTransform,
+  ClipColor,
+  ClipAudio,
+} from "@shared/types/timeline";
 /* ---------- Formatters ---------- */
 
 export type ValueFormatter = (value: number) => string;
@@ -26,6 +30,7 @@ export const fmt = {
   pan: (v: number) => (v === 0 ? "C" : v > 0 ? `R${v}` : `L${Math.abs(v)}`),
   /** Fade: internal 0..300 → 0.0s..3.0s */
   seconds: (v: number) => `${(v / 100).toFixed(1)}s`,
+  secondsShort: (v: number) => `${v.toFixed(1)}s`,
   /** Exposure: internal -100..100 → -2.5..+2.5 (EV unit) */
   exposure: (v: number) => {
     const ev = v / 40;
@@ -41,9 +46,11 @@ export interface SliderRow {
   readonly min: number;
   readonly max: number;
   readonly defaultValue: number;
+  readonly step?: number;
   readonly format: ValueFormatter;
   readonly transformKey?: keyof ClipTransform;
   readonly colorKey?: keyof ClipColor;
+  readonly audioKey?: keyof ClipAudio;
   readonly disabled?: boolean;
 }
 
@@ -202,11 +209,11 @@ export const INSPECTOR_TABS: readonly TabDef[] = [
           {
             kind: "slider",
             label: "Level",
-            min: -60,
-            max: 12,
-            defaultValue: 0,
-            format: fmt.db,
-            disabled: true,
+            min: 0,
+            max: 100,
+            defaultValue: 100,
+            format: fmt.percent,
+            audioKey: "volume",
           },
           {
             kind: "slider",
@@ -227,24 +234,26 @@ export const INSPECTOR_TABS: readonly TabDef[] = [
             kind: "slider",
             label: "In",
             min: 0,
-            max: 300,
-            defaultValue: 40,
-            format: fmt.seconds,
-            disabled: true,
+            max: 3,
+            defaultValue: 0,
+            step: 0.1,
+            format: fmt.secondsShort,
+            audioKey: "fadeInSec",
           },
           {
             kind: "slider",
             label: "Out",
             min: 0,
-            max: 300,
-            defaultValue: 60,
-            format: fmt.seconds,
-            disabled: true,
+            max: 3,
+            defaultValue: 0,
+            step: 0.1,
+            format: fmt.secondsShort,
+            audioKey: "fadeOutSec",
           },
           {
             kind: "switch",
             label: "Normalize",
-            defaultOn: true,
+            defaultOn: false,
             disabled: true,
           },
         ],

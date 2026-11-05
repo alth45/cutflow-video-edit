@@ -10,10 +10,16 @@ import {
   type TabDef,
 } from "./inspector.logic";
 import type { AppState, InspectorPanelTab } from "@shared/types/state";
-import type { Clip, ClipTransform, ClipColor } from "@shared/types/timeline";
+import type {
+  Clip,
+  ClipTransform,
+  ClipColor,
+  ClipAudio,
+} from "@shared/types/timeline";
 import {
   DEFAULT_CLIP_TRANSFORM,
   DEFAULT_CLIP_COLOR,
+  DEFAULT_CLIP_AUDIO,
 } from "@shared/types/timeline";
 
 export interface SliderRef {
@@ -197,6 +203,15 @@ function readColorValue<K extends keyof ClipColor>(
   return (activeClip.color ?? DEFAULT_CLIP_COLOR)[key];
 }
 
+function readAudioValue<K extends keyof ClipAudio>(
+  activeClip: Clip | undefined,
+  key: K,
+  fallback: ClipAudio[K],
+): ClipAudio[K] {
+  if (!activeClip) return fallback;
+  return (activeClip.audio ?? DEFAULT_CLIP_AUDIO)[key];
+}
+
 function renderSliderRow(
   row: SliderRow,
   activeClip: Clip | undefined,
@@ -221,16 +236,23 @@ function renderSliderRow(
       row.colorKey,
       row.defaultValue,
     ) as number;
+  } else if (row.audioKey) {
+    currentValue = readAudioValue(
+      activeClip,
+      row.audioKey,
+      row.defaultValue,
+    ) as number;
   }
 
-  const input = el("input", {
-    attrs: {
-      type: "range",
-      min: String(row.min),
-      max: String(row.max),
-      value: String(currentValue),
-    },
-  });
+  const attrs: Record<string, string> = {
+    type: "range",
+    min: String(row.min),
+    max: String(row.max),
+    value: String(currentValue),
+  };
+  if (row.step !== undefined) attrs["step"] = String(row.step);
+
+  const input = el("input", { attrs });
   input.style.setProperty(
     "--val",
     `${sliderPercent(currentValue, row.min, row.max)}%`,

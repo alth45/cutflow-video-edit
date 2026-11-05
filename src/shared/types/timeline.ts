@@ -120,6 +120,26 @@ export const DEFAULT_CLIP_COLOR: ClipColor = Object.freeze({
   temp: 0,
 });
 
+/* ============================================================
+   CLIP AUDIO
+   ------------------------------------------------------------
+   Audio properties untuk clip. Berlaku untuk AudioClip dan
+   VideoClip (embedded audio). Text clip punya field tapi
+   tidak dipakai.
+   ============================================================ */
+export interface ClipAudio {
+  readonly volume: number; // 0..100 (100 = full)
+  readonly muted: boolean;
+  readonly fadeInSec: number; // 0..3 (detik)
+  readonly fadeOutSec: number; // 0..3 (detik)
+}
+
+export const DEFAULT_CLIP_AUDIO: ClipAudio = Object.freeze({
+  volume: 100,
+  muted: false,
+  fadeInSec: 0,
+  fadeOutSec: 0,
+});
 /** Clip yang sumbernya file media. */
 export interface MediaClipSource {
   readonly kind: "media";
@@ -185,6 +205,7 @@ interface ClipBase {
   readonly colorToken: ClipColorToken;
   readonly transform: ClipTransform;
   readonly color: ClipColor;
+  readonly audio: ClipAudio; 
 }
 
 /**

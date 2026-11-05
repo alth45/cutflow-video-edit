@@ -5,6 +5,7 @@ import type { Clip, ClipColorToken } from "@shared/types/timeline";
 import {
   DEFAULT_CLIP_TRANSFORM,
   DEFAULT_CLIP_COLOR,
+  DEFAULT_CLIP_AUDIO,
 } from "@shared/types/timeline"; /* ============================================================
    DEMO SEEDING (DEV ONLY)
    ------------------------------------------------------------
@@ -205,7 +206,8 @@ function buildClip(
     durationSec: spec.durationSec,
     colorToken: spec.colorToken,
     transform: DEFAULT_CLIP_TRANSFORM,
-    color: DEFAULT_CLIP_COLOR, 
+    color: DEFAULT_CLIP_COLOR,
+    audio: DEFAULT_CLIP_AUDIO,
   };
 
   switch (spec.kind) {

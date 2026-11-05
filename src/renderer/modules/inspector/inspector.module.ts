@@ -5,6 +5,7 @@ import type { Clip } from "@shared/types/timeline";
 import {
   DEFAULT_CLIP_TRANSFORM,
   DEFAULT_CLIP_COLOR,
+  DEFAULT_CLIP_AUDIO,
 } from "@shared/types/timeline";
 
 import { getActiveClip } from "@state/selectors";
@@ -40,7 +41,8 @@ export function mountInspector(container: HTMLElement): () => void {
     if (
       activeClip &&
       (activeClip.transform !== prevActiveClip?.transform ||
-        activeClip.color !== prevActiveClip?.color)
+        activeClip.color !== prevActiveClip?.color ||
+        activeClip.audio !== prevActiveClip?.audio)
     ) {
       syncClipPropertiesFromClip(view, activeClip);
     }
@@ -87,6 +89,7 @@ function syncCollapsed(view: InspectorView, state: AppState): void {
 function syncClipPropertiesFromClip(view: InspectorView, clip: Clip): void {
   const transform = clip.transform ?? DEFAULT_CLIP_TRANSFORM;
   const color = clip.color ?? DEFAULT_CLIP_COLOR;
+  const audio = clip.audio ?? DEFAULT_CLIP_AUDIO;
 
   for (const [input, ref] of view.sliders) {
     let value: number | null = null;
@@ -95,6 +98,8 @@ function syncClipPropertiesFromClip(view: InspectorView, clip: Clip): void {
       value = Number(transform[ref.def.transformKey]);
     } else if (ref.def.colorKey) {
       value = Number(color[ref.def.colorKey]);
+    } else if (ref.def.audioKey) {
+      value = Number(audio[ref.def.audioKey]);
     }
 
     if (value === null) continue;

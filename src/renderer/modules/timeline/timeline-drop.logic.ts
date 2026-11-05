@@ -5,6 +5,7 @@ import { TIMELINE } from "@shared/constants";
 import {
   DEFAULT_CLIP_TRANSFORM,
   DEFAULT_CLIP_COLOR,
+  DEFAULT_CLIP_AUDIO,
 } from "@shared/types/timeline"; /* ============================================================
    DROP LOGIC — pure functions
    ------------------------------------------------------------
@@ -111,7 +112,8 @@ export function buildClipFromAsset(asset: MediaAsset, startSec: number): Clip {
     durationSec: roundToTenth(durationSec),
     colorToken: pickClipColor(asset.name),
     transform: DEFAULT_CLIP_TRANSFORM,
-    color: DEFAULT_CLIP_COLOR, 
+    color: DEFAULT_CLIP_COLOR,
+    audio: DEFAULT_CLIP_AUDIO, 
   };
 
   if (kind === "audio") {

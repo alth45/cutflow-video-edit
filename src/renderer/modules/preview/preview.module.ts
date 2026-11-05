@@ -11,9 +11,15 @@ import { getActiveClipsAtTime, type ActiveClipInfo } from "./preview.logic";
 import {
   DEFAULT_CLIP_TRANSFORM,
   DEFAULT_CLIP_COLOR,
+  DEFAULT_CLIP_AUDIO,
 } from "@shared/types/timeline";
 
-import type { Clip, ClipTransform, ClipColor } from "@shared/types/timeline";
+import type {
+  Clip,
+  ClipTransform,
+  ClipColor,
+  ClipAudio,
+} from "@shared/types/timeline";
 /* ============================================================
    PREVIEW MODULE — ENTRY
    ============================================================ */
@@ -29,6 +35,7 @@ export function mountPreview(container: HTMLElement): () => void {
   /* Composite state — video cache untuk reuse elemen. */
   const videoCache = new Map<string, HTMLVideoElement>();
   const renderedClips = new Map<string, HTMLElement>();
+  const audioCache = new Map<string, HTMLAudioElement>();
 
   const unsubscribe = appStore.subscribe((state, prev) => {
     /* Update timecode setiap frame */
@@ -64,11 +71,13 @@ export function mountPreview(container: HTMLElement): () => void {
 
     if (timeChanged || seqChanged || playStateChanged) {
       renderComposite(view, state, videoCache, renderedClips);
+      syncAudio(state, state.playback.playing, audioCache);
     }
   });
 
   /* Initial composite render (di F5 default state = kosong). */
   renderComposite(view, initial, videoCache, renderedClips);
+  syncAudio(initial, false, audioCache); // ← TAMBAH
 
   const detach = attachPreviewController(view);
 
@@ -76,13 +85,19 @@ export function mountPreview(container: HTMLElement): () => void {
     detach();
     unsubscribe();
     ticker.stop();
-    /* Cleanup video cache */
     for (const video of videoCache.values()) {
       video.pause();
       video.removeAttribute("src");
       video.load();
     }
     videoCache.clear();
+    for (const audio of audioCache.values()) {
+      // ← TAMBAH
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+    }
+    audioCache.clear();
     renderedClips.clear();
     container.replaceChildren();
   };
@@ -252,14 +267,25 @@ function createPlaceholderVisual(
 /* ============================================================
    CLIP VISUAL UPDATER
    ============================================================ */
-
 function updateClipVisual(
   el: HTMLElement,
   info: ActiveClipInfo,
   playing: boolean,
 ): void {
-  const { clip, visualType, localTimeSec } = info;
+  const { clip, track, visualType, localTimeSec } = info;
+
   applyVisualTransform(el, clip);
+
+  /* Video audio — unmute + volume + fade. */
+  if (visualType === "video") {
+    const video = el.querySelector<HTMLVideoElement>("video");
+    if (video) {
+      const audio = clip.audio ?? DEFAULT_CLIP_AUDIO;
+      const muted = track.muted || audio.muted;
+      video.muted = muted;
+      video.volume = muted ? 0 : computeClipVolume(clip, localTimeSec);
+    }
+  }
   switch (visualType) {
     case "text": {
       const textEl = el.querySelector<HTMLElement>(".preview-text");
@@ -298,6 +324,99 @@ function updateClipVisual(
     default:
       return;
   }
+}
+
+/* ============================================================
+   AUDIO PLAYBACK (F14s)
+   ------------------------------------------------------------
+   Audio clips play via <audio> elements. Video clips' embedded
+   audio handled in updateClipVisual (unmute + volume).
+   ============================================================ */
+
+function syncAudio(
+  state: AppState,
+  playing: boolean,
+  audioCache: Map<string, HTMLAudioElement>,
+): void {
+  const timeSec = state.playback.currentTimeSec;
+  const activeAudioIds = new Set<string>();
+
+  for (const track of state.project.sequence.tracks) {
+    if (track.kind !== "audio") continue;
+
+    for (const clip of track.clips) {
+      if (clip.kind !== "audio") continue;
+      const end = clip.startSec + clip.durationSec;
+      if (timeSec < clip.startSec || timeSec >= end) continue;
+
+      activeAudioIds.add(clip.id);
+
+      const asset = state.project.mediaAssets.find(
+        (a) => clip.source.kind === "media" && a.id === clip.source.mediaId,
+      );
+      if (!asset || isDemoPath(asset.path)) continue;
+
+      const localTimeSec = timeSec - clip.startSec;
+
+      let audio = audioCache.get(clip.id);
+      if (!audio) {
+        audio = document.createElement("audio");
+        audio.src = mediaUrl(asset.path);
+        audio.preload = "auto";
+        audioCache.set(clip.id, audio);
+      }
+
+      const clipAudio = clip.audio ?? DEFAULT_CLIP_AUDIO;
+      const muted = track.muted || clipAudio.muted;
+      audio.muted = muted;
+      audio.volume = muted ? 0 : computeClipVolume(clip, localTimeSec);
+
+      if (playing) {
+        if (Math.abs(audio.currentTime - localTimeSec) > 0.3) {
+          audio.currentTime = localTimeSec;
+        }
+        if (audio.paused) {
+          audio.play().catch(() => {
+            /* autoplay blocked */
+          });
+        }
+      } else {
+        if (!audio.paused) audio.pause();
+        if (Math.abs(audio.currentTime - localTimeSec) > 0.05) {
+          audio.currentTime = localTimeSec;
+        }
+      }
+    }
+  }
+
+  /* Cleanup inactive audio */
+  for (const [clipId, audio] of audioCache) {
+    if (!activeAudioIds.has(clipId)) {
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+      audioCache.delete(clipId);
+    }
+  }
+}
+
+/**
+ * Hitung volume efektif clip pada local time tertentu, dengan fade
+ * envelope. Return 0..1 (linear). Muted di-handle terpisah di caller.
+ */
+function computeClipVolume(clip: Clip, localTimeSec: number): number {
+  const audio = clip.audio ?? DEFAULT_CLIP_AUDIO;
+  let vol = audio.volume / 100;
+
+  const dur = clip.durationSec;
+  if (audio.fadeInSec > 0 && localTimeSec < audio.fadeInSec) {
+    vol *= localTimeSec / audio.fadeInSec;
+  }
+  if (audio.fadeOutSec > 0 && localTimeSec > dur - audio.fadeOutSec) {
+    vol *= (dur - localTimeSec) / audio.fadeOutSec;
+  }
+
+  return Math.max(0, Math.min(1, vol));
 }
 
 /* ============================================================

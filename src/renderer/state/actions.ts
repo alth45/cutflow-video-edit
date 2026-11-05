@@ -9,6 +9,7 @@ import type { Project, MediaAsset } from "@shared/types/project";
 import {
   DEFAULT_CLIP_TRANSFORM,
   DEFAULT_CLIP_COLOR,
+  DEFAULT_CLIP_AUDIO,
 } from "@shared/types/timeline";
 import type {
   Clip,
@@ -20,6 +21,7 @@ import type {
   TransitionKind,
   ClipTransform,
   ClipColor,
+  ClipAudio,
 } from "@shared/types/timeline";
 import type {
   AppState,
@@ -1176,6 +1178,53 @@ export function setClipColorProperty<K extends keyof ClipColor>(
 }
 
 /* ============================================================
+   CLIP AUDIO
+   ------------------------------------------------------------
+   Update audio properties (volume, fade). 1 history entry per
+   update (granular, sama seperti transform & color).
+   ============================================================ */
+
+export function setClipAudioProperty<K extends keyof ClipAudio>(
+  clipId: string,
+  key: K,
+  value: ClipAudio[K],
+): void {
+  appStore.setState((state) => {
+    for (const track of state.project.sequence.tracks) {
+      if (track.locked) continue;
+
+      const idx = track.clips.findIndex((c) => c.id === clipId);
+      if (idx < 0) continue;
+
+      const clip = track.clips[idx];
+      if (!clip) return state;
+
+      const current = clip.audio ?? DEFAULT_CLIP_AUDIO;
+      if (current[key] === value) return state;
+
+      const nextClip: Clip = {
+        ...clip,
+        audio: { ...current, [key]: value },
+      };
+
+      const nextClips = [...track.clips];
+      nextClips[idx] = nextClip;
+
+      const nextProject = {
+        ...state.project,
+        sequence: {
+          ...state.project.sequence,
+          tracks: state.project.sequence.tracks.map((t) =>
+            t.id === track.id ? { ...t, clips: nextClips } : t,
+          ),
+        },
+      };
+      return withProject(state, nextProject);
+    }
+    return state;
+  });
+}
+/* ============================================================
    SPLIT CLIP
    ------------------------------------------------------------
    Belah clip di `splitTimeSec` menjadi dua clip baru:
@@ -1374,6 +1423,7 @@ export function addTextClip(trackId: string, startSec: number): void {
       colorToken: "purple",
       transform: DEFAULT_CLIP_TRANSFORM,
       color: DEFAULT_CLIP_COLOR,
+      audio: DEFAULT_CLIP_AUDIO,
       source: { kind: "text", content: "Text" },
     };
 

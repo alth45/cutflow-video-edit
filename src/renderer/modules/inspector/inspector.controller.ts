@@ -61,6 +61,8 @@ export function attachInspectorController(view: InspectorView): () => void {
         actions.setClipTransformProperty(activeId, ref.def.transformKey, value);
       } else if (ref.def.colorKey) {
         actions.setClipColorProperty(activeId, ref.def.colorKey, value);
+      } else if (ref.def.audioKey) {
+        actions.setClipAudioProperty(activeId, ref.def.audioKey, value);
       }
     }),
   );

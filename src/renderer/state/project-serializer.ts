@@ -3,6 +3,7 @@ import { PROJECT_SCHEMA_VERSION } from "@shared/types/project";
 import {
   DEFAULT_CLIP_TRANSFORM,
   DEFAULT_CLIP_COLOR,
+  DEFAULT_CLIP_AUDIO,
 } from "@shared/types/timeline";
 
 /* ============================================================
@@ -99,6 +100,7 @@ export function parseProject(json: string): ParseProjectResult {
           if (!patched["transform"])
             patched["transform"] = DEFAULT_CLIP_TRANSFORM;
           if (!patched["color"]) patched["color"] = DEFAULT_CLIP_COLOR;
+          if (!patched["audio"]) patched["audio"] = DEFAULT_CLIP_AUDIO;
           return patched;
         })
       : clipsRaw;

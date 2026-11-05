@@ -209,11 +209,27 @@ export function renderTrackHeads(
 
     const btns = el("div", { className: "th-btns" });
 
-    const eyeBtn = el("button", {
-      className: `icon-btn${track.hidden ? " active" : ""}`,
-      attrs: { title: track.hidden ? "Show track" : "Hide track" },
+    /* Audio track: first button = mute toggle. Video track: = hide toggle. */
+    const isAudioTrack = track.kind === "audio";
+    const toggleState = isAudioTrack ? track.muted : track.hidden;
+    const toggleIcon = isAudioTrack
+      ? toggleState
+        ? "volume-muted"
+        : "volume"
+      : "eye";
+    const toggleTitle = isAudioTrack
+      ? toggleState
+        ? "Unmute track"
+        : "Mute track"
+      : toggleState
+        ? "Show track"
+        : "Hide track";
+
+    const toggleBtn = el("button", {
+      className: `icon-btn${toggleState ? " active" : ""}`,
+      attrs: { title: toggleTitle },
     });
-    eyeBtn.append(createIcon("eye"));
+    toggleBtn.append(createIcon(toggleIcon));
 
     const lockBtn = el("button", {
       className: `icon-btn${track.locked ? " active" : ""}`,
@@ -221,10 +237,10 @@ export function renderTrackHeads(
     });
     lockBtn.append(createIcon("lock"));
 
-    eyeBtn.dataset["toggle"] = "hidden";
+    toggleBtn.dataset["toggle"] = isAudioTrack ? "muted" : "hidden";
     lockBtn.dataset["toggle"] = "locked";
 
-    btns.append(eyeBtn, lockBtn);
+    btns.append(toggleBtn, lockBtn);
     th.append(btns);
     container.append(th);
   }

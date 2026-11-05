@@ -19,6 +19,7 @@ import {
   ZoomOut,
   Maximize,
   Volume2,
+  VolumeX,
   Film,
   Music,
   Eye,
@@ -79,6 +80,7 @@ const ICONS = {
   "zoom-out": ZoomOut,
   fullscreen: Maximize,
   volume: Volume2,
+  "volume-muted": VolumeX, 
 
   /* Tracks */
   film: Film,
