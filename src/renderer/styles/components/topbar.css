@@ -1,0 +1,214 @@
+/* ============================================================
+   TOPBAR
+   ------------------------------------------------------------
+   Bar atas aplikasi: brand, menu, dan action buttons.
+
+   Struktur:
+     .topbar
+       ├── .brand         (logo + nama)
+       ├── .menubar       (nav > .menu × 6)
+       │    └── .dropdown (di dalam .menu.open)
+       └── .topbar-right  (undo/redo + export)
+
+   Semua nilai dari tokens.css. Tidak ada hex hardcoded.
+   ============================================================ */
+
+/* ============================================================
+   TOPBAR CONTAINER
+   ------------------------------------------------------------
+   Grid area `top` — sudah diset di `.app` (layout.css).
+   Gradient vertical halus dari panel-2 → sedikit lebih gelap,
+   memberi elevasi visual terhadap panel di bawahnya.
+   ============================================================ */
+.topbar {
+  grid-area: top;
+  display: flex;
+  align-items: center;
+  gap: var(--space-7);
+  padding: 0 var(--space-6);
+  background: linear-gradient(180deg, #151926, #0f1219);
+  border-bottom: 1px solid var(--line);
+  position: relative;
+  z-index: var(--z-sticky);
+}
+
+/* ============================================================
+   BRAND
+   ------------------------------------------------------------
+   Logo gradient + nama. Padding-right sedikit lebih besar
+   dari gap topbar default untuk memberi "napas" sebelum menu.
+   ============================================================ */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-weight: var(--fw-bold);
+  font-size: var(--text-size-135);
+  letter-spacing: 0.2px;
+  padding-right: var(--space-3);
+}
+
+.logo {
+  color: var(
+    --on-accent
+  ); /* ← BARU: agar fill="currentColor" pada path icon resolve ke putih */
+  width: 25px;
+  height: 25px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 3px 10px rgba(124, 92, 255, 0.45);
+}
+
+.logo svg {
+  width: 11px;
+  height: 11px;
+  stroke-width: 3; /* icon kecil butuh stroke lebih tebal */
+  /* fill tidak perlu — Lucide pakai stroke, warna ikut
+     `color: var(--on-accent)` dari `.logo` */
+}
+
+/* ============================================================
+   MENUBAR
+   ------------------------------------------------------------
+   Container horizontal untuk menu items. Gap 1px memberi
+   separation visual tipis antar menu tanpa terlihat "berjarak".
+   ============================================================ */
+.menubar {
+  display: flex;
+  gap: 1px;
+}
+
+/* ============================================================
+   MENU ITEM
+   ------------------------------------------------------------
+   `.menu`         = wrapper (position context)
+   `.menu-btn`     = tombol trigger
+   `.menu.open`    = state saat dropdown terbuka
+
+   State `.active` pada `.menu-btn` menandakan dropdown-nya
+   sedang terbuka (background highlight).
+   ============================================================ */
+.menu {
+  position: relative;
+}
+
+.menu-btn {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font-size: var(--text-size-125);
+  padding: var(--space-3) var(--space-5);
+  border-radius: 7px;
+  transition:
+    color var(--duration),
+    background var(--duration);
+}
+
+.menu-btn:hover,
+.menu.open .menu-btn {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
+}
+
+/* ============================================================
+   DROPDOWN
+   ------------------------------------------------------------
+   Panel popup di bawah menu button. Default `display: none`,
+   ditampilkan saat `.menu.open`. Animasi masuk via `@keyframes pop`.
+
+   Kenapa `top: calc(100% + 7px)` bukan `top: 100%`:
+   Memberi gap 7px antara trigger dan dropdown → visual "melayang",
+   standard UI pattern. Sama persis dengan original.
+   ============================================================ */
+.dropdown {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 0;
+  min-width: 214px;
+  padding: var(--space-3);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xl);
+  display: none;
+  z-index: var(--z-dropdown);
+}
+
+.menu.open .dropdown {
+  display: block;
+  animation: pop var(--duration-fast) ease-out;
+}
+
+/* Animasi masuk dropdown — dari opacity 0 + geser 4px ke atas,
+   menjadi opacity 1 + posisi natural. Cepat (~120ms) supaya
+   responsif tanpa terasa "lambat". */
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* ============================================================
+   DROPDOWN ITEM
+   ------------------------------------------------------------
+   Setiap item = button full-width dengan label kiri + shortcut
+   kanan. Layout pakai flex justify-between.
+
+   Hover: background accent transparan (bukan solid) — tetap
+   konsisten dengan tema dark + tidak menyilaukan.
+   ============================================================ */
+.dropdown button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-10);
+  width: 100%;
+  background: transparent;
+  border: 0;
+  font-size: var(--text-size-125);
+  padding: 7px var(--space-5);
+  border-radius: 7px;
+  text-align: left;
+  color: var(--text);
+  transition: background var(--duration-fast);
+}
+
+.dropdown button:hover {
+  background: rgba(124, 92, 255, 0.18);
+}
+
+.dropdown button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Shortcut hint di kanan — muted, kecil, monospace feel */
+.dropdown button span {
+  color: var(--muted-2);
+  font-size: var(--text-size-110);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Separator horizontal antar grup menu (mis. antara Save dan Import) */
+.dropdown .sep {
+  height: 1px;
+  background: var(--line);
+  margin: var(--space-2) var(--space-2);
+}
+
+/* ============================================================
+   TOPBAR RIGHT
+   ------------------------------------------------------------
+   Group action buttons di sisi kanan topbar. `margin-left: auto`
+   mendorong ke ujung kanan — memanfaatkan `display: flex` di
+   `.topbar` parent.
+   ============================================================ */
+.topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}

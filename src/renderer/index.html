@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline';
+      style-src 'self' 'unsafe-inline';
+      img-src 'self' data: blob: cutflow-media:;
+      font-src 'self' data:;
+      media-src 'self' blob: cutflow-media:;
+      connect-src 'self' ws://localhost:* http://localhost:*;
+      object-src 'none';
+      base-uri 'self';
+      form-action 'none';
+    "
+    />
+
+    <title>CutFlow</title>
+
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0b0d12;
+        color: #e6e9f2;
+        font-family:
+          "Inter",
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        font-size: 13px;
+        -webkit-font-smoothing: antialiased;
+      }
+      #boot {
+        height: 100%;
+        display: grid;
+        place-items: center;
+        gap: 12px;
+      }
+      #boot .logo {
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, #7c5cff, #00d3a7);
+        box-shadow: 0 6px 20px rgba(124, 92, 255, 0.4);
+      }
+      #boot .logo svg {
+        width: 15px;
+        height: 15px;
+        fill: #fff;
+      }
+      #boot .label {
+        color: #8b93a7;
+        letter-spacing: 0.3px;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="boot">
+        <div class="logo">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </div>
+        <div class="label">Loading CutFlow…</div>
+      </div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

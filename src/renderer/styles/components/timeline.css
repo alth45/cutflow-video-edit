@@ -1,0 +1,770 @@
+/* ============================================================
+   TIMELINE
+   ------------------------------------------------------------
+   Panel bawah: toolbar, track headers (kiri), track content
+   (kanan, scrollable), ruler, tracks, clips, playhead.
+
+   Struktur:
+     .timeline (grid area timeline, flex column)
+       ├── .tl-toolbar      (tools kiri + zoom kanan)
+       └── .tl-body         (flex row)
+            ├── .track-heads (132px, overflow hidden)
+            │    ├── .th-spacer
+            │    └── .th × N
+            └── .tl-scroll  (flex 1, overflow auto)
+                 └── .tl-content  (width: zoom × 100%)
+                      ├── .ruler
+                      ├── .tracks
+                      │    └── .track × N
+                      │         └── .clip × N
+                      │              └── .clip-label / .wave
+                      └── .playhead
+
+   CSS CUSTOM PROPERTIES DINAMIS (di-set via JS di F11):
+   - `--zoom` di `.tl-content`  : skala horizontal (1 = 100%, 3 = 300%)
+   - `--p` di `.tl-content`     : progress playhead (0..1)
+   - `--val` di `input[type=range]#zoom` : fill gradient slider
+   ============================================================ */
+
+/* ============================================================
+   TIMELINE CONTAINER
+   ------------------------------------------------------------
+   Grid area `timeline` + flex column (toolbar | body).
+   ============================================================ */
+.timeline {
+  grid-area: timeline;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+
+/* ============================================================
+   TOOLBAR
+   ------------------------------------------------------------
+   Tools kiri (selection, razor, hand, text, undo/redo) +
+   zoom controls kanan.
+   ============================================================ */
+.tl-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 40px;
+  padding: 0 var(--space-5);
+  flex: none;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-2);
+}
+
+.tl-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.tl-tools.right {
+  margin-left: auto;
+}
+
+/* Icon zoom-out / zoom-in di sisi kiri slider — muted lebih
+   redup dari icon tool biasa, untuk menunjukkan bahwa ini
+   label statis, bukan tombol. */
+.tl-tools .ic.muted {
+  color: var(--muted-2);
+}
+
+/* Zoom slider — lebih sempit dari default, menghemat ruang
+   di toolbar. `--val` di-set oleh controller (F11) setiap
+   perubahan nilai (fill gradient). */
+#zoom {
+  width: 110px;
+}
+
+.zoom-val {
+  font-size: var(--text-size-110);
+  color: var(--muted);
+  width: 40px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   BODY
+   ------------------------------------------------------------
+   Flex row: header kiri (fixed) + content kanan (scroll).
+   `min-height: 0` wajib — parent `.timeline` flex column,
+   butuh ini supaya `.tl-body` bisa menyusut < konten minimum.
+   ============================================================ */
+.tl-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+/* ============================================================
+   TRACK HEADERS (kiri)
+   ------------------------------------------------------------
+   Kolom kiri panel track. Setiap `.th` height-nya HARUS match
+   dengan `.track` height di kanan (52px) — kalau tidak, track
+   dan header akan misalign.
+
+   `overflow: hidden`:
+   - Native scroll di sini TIDAK diaktifkan.
+   - Kalau track content scroll vertical, header TIDAK ikut
+     scroll (limitation original). Sync scroll akan di-handle
+     di controller (F11) — flag untuk improvement nanti.
+   ============================================================ */
+.track-heads {
+  width: 132px;
+  flex: 0 0 132px;
+  background: var(--panel-2);
+  border-right: 1px solid var(--line);
+  overflow: hidden;
+}
+
+/* Spacer di atas header — match tinggi `.ruler` (28px) di
+   kanan, supaya track header row 1 align dengan track row 1. */
+.th-spacer {
+  height: 28px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  font-size: var(--text-size-95);
+  letter-spacing: var(--ls-wider);
+  color: var(--muted-2);
+  text-transform: uppercase;
+  font-weight: var(--fw-semibold);
+}
+
+.th {
+  height: 52px; /* ← match dengan `.track` */
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-5);
+  border-bottom: 1px solid var(--line-soft);
+  font-size: var(--text-size-115);
+  color: var(--muted);
+  font-weight: var(--fw-semibold);
+}
+
+.th .badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: #1e2431;
+  color: #8fa0c0;
+}
+
+.th .badge svg {
+  width: 11px;
+  height: 11px;
+  stroke-width: 2.5;
+  /* `stroke: currentColor` sudah dari Lucide default — warna
+     ikut `color: #8fa0c0` di `.th .badge` */
+}
+
+.th .th-btns {
+  margin-left: auto;
+  display: flex;
+  gap: var(--space-1);
+}
+
+/* Icon buttons di header lebih kecil (20×20) — supaya muat
+   dua tombol (eye + lock) di space terbatas bersama label. */
+.th .th-btns .icon-btn {
+  width: 20px;
+  height: 20px;
+}
+
+.th .th-btns .icon-btn svg {
+  width: 11px;
+  height: 11px;
+}
+
+/* ============================================================
+   SCROLL AREA
+   ------------------------------------------------------------
+   Area track yang scrollable horizontal + vertikal.
+   `min-width: 0` wajib — parent flex row; tanpa ini, area
+   ini akan "menolak menyusut" < konten.
+   ============================================================ */
+.tl-scroll {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+  position: relative;
+}
+
+/* Konten timeline: ruler + tracks + playhead.
+   Width = zoom × 100% — user zoom ke 3x, content jadi 3x
+   lebar viewport, scroll horizontal aktif.
+
+   `min-width: 100%` — saat zoom < 1 (tidak didukung UI tapi
+   defensive), content tetap memenuhi viewport.
+
+   `--p` (progress 0..1) — dipakai oleh `.playhead` (left:
+   calc(var(--p) * 100%)). Di-set JS setiap frame tick. */
+.tl-content {
+  position: relative;
+  width: calc(var(--zoom, 1) * 100%);
+  min-width: 100%;
+  --p: 0;
+}
+
+/* ============================================================
+   RULER
+   ------------------------------------------------------------
+   Skala waktu dengan tick marks + label. Klik untuk scrub
+   (controller F11).
+
+   Tick marks pakai dua layer `repeating-linear-gradient`:
+   - Major tick: rgba(255,255,255,.22), tinggi 9px, interval
+     8.3333% (5s dari 60s total = 1/12 lebar)
+   - Minor tick: rgba(255,255,255,.09), tinggi 5px, interval
+     1.6667% (1s dari 60s = 1/60 lebar)
+
+   CATATAN PENTING: interval di atas HARDCODED untuk durasi
+   60 detik (default project). Kalau user ubah `sequence.
+   durationSec` ke nilai lain, tick akan misalign dengan label.
+   Fix: generate tick `<div>` via JS di F11 (bukan CSS trick).
+   Untuk sekarang, 60s default = correct.
+   ============================================================ */
+.ruler {
+  position: relative;
+  height: 28px;
+  border-bottom: 1px solid var(--line);
+  background-color: #0f131b;
+
+  /* Layer 1 (di atas): major tick — 1px garis, height 9px */
+  /* Layer 2 (di bawah): minor tick — 1px garis, height 5px */
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.22) 0 1px,
+      transparent 1px 8.3333%
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.09) 0 1px,
+      transparent 1px 1.6667%
+    );
+  background-repeat: repeat-x, repeat-x;
+  background-size:
+    100% 9px,
+    100% 5px;
+  background-position:
+    bottom left,
+    bottom left;
+
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Label di atas tick — posisi absolute per label, `left` di-set
+   oleh JS (persentase). `transform: translateX(3px)` menggeser
+   label sedikit ke kanan agar tidak menumpuk dengan garis tick
+   di posisi 0%. `pointer-events: none` agar label tidak
+   menghalangi klik scrub pada ruler. */
+.ruler .rl {
+  position: absolute;
+  top: 3px;
+  transform: translateX(3px);
+  font-size: var(--text-size-95);
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* ============================================================
+   TRACKS
+   ------------------------------------------------------------
+   Container semua track. `position: relative` untuk konteks
+   positioning clip (yang absolute di dalam track).
+   ============================================================ */
+.tracks {
+  position: relative;
+}
+
+.track {
+  position: relative;
+  height: 52px;
+  border-bottom: 1px solid var(--line-soft);
+  background: #0f131b;
+}
+
+/* Zebra striping — track genap sedikit lebih terang.
+   Membantu user membedakan baris saat horizontal scan. */
+.track:nth-child(even) {
+  background: #111520;
+}
+
+/* Track video mendapat tint accent purple yang sangat subtle.
+   Memberi hint visual "ini area video" tanpa overwhelming. */
+.track.video {
+  background-image: linear-gradient(
+    180deg,
+    rgba(124, 92, 255, 0.03),
+    transparent
+  );
+}
+
+/* ============================================================
+   CLIP
+   ------------------------------------------------------------
+   Posisi `absolute` di dalam `.track`. `left` dan `width` di-set
+   inline oleh JS (persentase dari `.tl-content` width).
+
+   `top/bottom: 4px` — inset 4px dari atas-bawah track, memberi
+   gap vertikal antar clip (meski hanya 1 clip per row).
+
+   `overflow: hidden` — clip konten ke border-radius.
+   ============================================================ */
+.clip {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    border-color var(--duration),
+    box-shadow var(--duration),
+    transform 0.1s;
+}
+
+.clip:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* Selected state — border putih + glow accent + z-index naik
+   agar clip "di atas" clip lain saat overlap (multi-track). */
+.clip.selected {
+  border-color: #fff;
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 8px 20px rgba(0, 0, 0, 0.55);
+  z-index: var(--z-clip);
+}
+
+/* Label clip — overlay di atas gradient background.
+   `pointer-events: none` agar klik menembus ke `.clip` (event
+   delegation di parent). */
+.clip .clip-label {
+  position: absolute;
+  inset: 0 0 auto 0; /* top:0 right:0 bottom:auto left:0 */
+  padding: 3px 7px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-size-105);
+  font-weight: var(--fw-semibold);
+  color: #fff;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.42), transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.clip .clip-label svg {
+  width: 10px;
+  height: 10px;
+  color: rgba(255, 255, 255, 0.85);
+  flex: none;
+  stroke-width: 2.5;
+}
+
+/* Text span di dalam label clip — flex item yang bisa
+   shrink untuk ellipsis. `min-width: 0` adalah kunci: tanpa
+   ini, flex item tidak menyusut < content size → ellipsis
+   tidak pernah muncul. */
+.clip .clip-label-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Film perforation pattern di bottom clip video — 13px tinggi.
+   `repeating-linear-gradient` horizontal membuat dash "putih
+   transparan 7px, gap 3px" meniru sprocket hole film. */
+.clip.video::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 13px;
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.16) 0 7px,
+    transparent 7px 10px
+  );
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* ============================================================
+   WAVEFORM (audio clip)
+   ------------------------------------------------------------
+   Bar-bar vertikal yang merepresentasikan amplitude audio.
+   Jumlah & tinggi bar di-generate JS di F11 (atau F4 helper
+   `waveform.logic.ts`).
+
+   `inset: 8px 6px 6px` — top 8px (di bawah label 10.5px),
+   right 6px, bottom 6px, left 6px. Bars centered secara
+   vertikal via `align-items: center`.
+   ============================================================ */
+.wave {
+  position: absolute;
+  inset: 8px 6px 6px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.wave i {
+  flex: 1;
+  min-width: 1px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+/* ============================================================
+   CLIP COLORS
+   ------------------------------------------------------------
+   7 token warna clip. Nama kelas `.c-{token}` cocok dengan
+   `ClipColorToken` di `shared/types/timeline.ts`.
+
+   Start color pakai `var(--clip-{token})` (token di tokens.css).
+   End color (lebih gelap 30-40%) hardcoded per gradient —
+   lihat penjelasan di tokens.css: end color spesifik per clip,
+   hanya dipakai sekali, dan bergantung pada start color.
+   ============================================================ */
+.c-purple {
+  background: linear-gradient(135deg, var(--clip-purple), #5636d6);
+}
+.c-blue {
+  background: linear-gradient(135deg, var(--clip-blue), #1d4ed8);
+}
+.c-orange {
+  background: linear-gradient(135deg, var(--clip-orange), #ea580c);
+}
+.c-teal {
+  background: linear-gradient(135deg, var(--clip-teal), #0d9488);
+}
+.c-pink {
+  background: linear-gradient(135deg, var(--clip-pink), #be185d);
+}
+.c-green {
+  background: linear-gradient(135deg, var(--clip-green), #15803d);
+}
+.c-cyan {
+  background: linear-gradient(135deg, var(--clip-cyan), #0e7490);
+}
+
+/* ============================================================
+   PLAYHEAD
+   ------------------------------------------------------------
+   Garis merah vertikal + marker segitiga di atas.
+
+   `left: calc(var(--p) * 100%)` — posisi di-drive oleh `--p`
+   (0..1) yang di-set JS setiap frame tick. `margin-left: -1px`
+   untuk "center" garis 2px pada posisi playhead (bukan offset
+   1px ke kanan).
+
+   `z-index: var(--z-clip-active)` = 20 — di atas semua clip
+   (termasuk selected yang z-index 3), dan di atas ruler.
+
+   `pointer-events: none` — playhead tidak interaktif; klik
+   di area playhead menembus ke track/ruler di belakangnya.
+   ============================================================ */
+.playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--p) * 100%);
+  width: 2px;
+  margin-left: -1px;
+  background: var(--danger);
+  box-shadow: 0 0 10px rgba(255, 77, 109, 0.7);
+  z-index: var(--z-clip-active);
+  pointer-events: none;
+}
+
+/* Marker segitiga di atas playhead (di area ruler).
+   `clip-path: polygon(...)` membuat bentuk "pin" dengan ujung
+   runcing ke bawah — menandai posisi playhead di ruler.
+
+   `border-radius: 3px 3px 3px 0` — tidak berpengaruh dengan
+   clip-path aktif, tapi dipertahankan sebagai fallback visual
+   (browser lama yang tidak support clip-path). */
+.playhead::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 11px;
+  height: 11px;
+  background: var(--danger);
+  border-radius: 3px 3px 3px 0;
+  clip-path: polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%);
+}
+
+/* ============================================================
+   DRAGGING CLIP (F14b)
+   ------------------------------------------------------------
+   Saat user drag clip untuk pindah posisi. Elevated di atas
+   clip lain, cursor grabbing, transisi dimatikan supaya
+   `left` update instan.
+   ============================================================ */
+.clip.dragging {
+  cursor: grabbing;
+  z-index: var(--z-clip-active);
+  opacity: 0.9;
+  box-shadow:
+    0 0 0 2px var(--accent),
+    var(--shadow-lg);
+  /* Matikan transisi posisi — selama drag, `left` harus update
+     instan setiap mousemove. Border/shadow tetap smooth dari
+     rule `.clip` base. */
+  transition:
+    border-color var(--duration),
+    box-shadow var(--duration);
+}
+
+/* ============================================================
+   SNAP GUIDE (F14b)
+   ------------------------------------------------------------
+   Garis vertikal teal yang muncul saat clip yang di-drag
+   snap ke target (clip edge, playhead, boundary). `top: 28px`
+   skip ruler height.
+   ============================================================ */
+.snap-guide {
+  position: absolute;
+  top: 28px; /* skip ruler */
+  bottom: 0;
+  width: 1px;
+  margin-left: -0.5px; /* center 1px di posisi */
+  background: var(--accent-2);
+  box-shadow: 0 0 8px rgba(0, 211, 167, 0.8);
+  z-index: var(--z-snap-guide);
+  pointer-events: none;
+  display: none;
+}
+
+.snap-guide.visible {
+  display: block;
+}
+
+/* ============================================================
+   DROP GHOST (F14c)
+   ------------------------------------------------------------
+   Preview posisi clip saat user drag media ke timeline.
+   Posisi (top/left/width/height) di-set inline oleh controller.
+   ============================================================ */
+.drop-ghost {
+  position: absolute;
+  background: rgba(124, 92, 255, 0.28);
+  border: 1px dashed rgba(124, 92, 255, 0.75);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  display: none;
+  z-index: var(--z-snap-guide);
+}
+
+.drop-ghost.visible {
+  display: block;
+}
+
+/* ============================================================
+   TRIM HANDLE (F14d)
+   ------------------------------------------------------------
+   Hit area di kanan clip untuk resize duration.
+   - Transparan by default, subtle highlight saat hover clip.
+   - `max-width: 50%` mencegah handle menutupi clip yang sangat
+     pendek (biar bisa tetap drag clip).
+   ============================================================ */
+.clip-trim {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  max-width: 50%;
+  cursor: ew-resize;
+  z-index: 5;
+  background: transparent;
+  transition: background var(--duration);
+}
+
+.clip-trim-right {
+  right: 0;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+/* Saat clip di-hover, tampilkan hint subtle bahwa handle ada. */
+.clip:hover .clip-trim {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.clip:hover .clip-trim:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Saat trimming, disable transisi lebar supaya responsif. */
+.clip.trimming {
+  transition: none;
+  border-color: #fff;
+  box-shadow:
+    0 0 0 2px var(--accent),
+    var(--shadow-lg);
+}
+
+/* ============================================================
+   RAZOR MODE (F14f)
+   ------------------------------------------------------------
+   Saat tool aktif = razor, kursor crosshair dan trim handle
+   disembunyikan (tidak relevan di mode cut).
+   ============================================================ */
+.tl-scroll.razor-mode,
+.tl-scroll.razor-mode .clip {
+  cursor: crosshair;
+}
+
+.tl-scroll.razor-mode .clip-trim {
+  display: none;
+}
+/* ============================================================
+   MARQUEE (F14h)
+   ------------------------------------------------------------
+   Rubber-band selection rectangle. Posisi & ukuran di-set
+   inline oleh controller (px coordinates relative to tlContent).
+   ============================================================ */
+.marquee {
+  position: absolute;
+  background: rgba(124, 92, 255, 0.12);
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+  pointer-events: none;
+  display: none;
+  z-index: var(--z-snap-guide);
+}
+
+.marquee.visible {
+  display: block;
+}
+
+/* ============================================================
+   TRANSITION BOX (F14k)
+   ------------------------------------------------------------
+   Kotak kecil di junction antar clip. Empty = click to add.
+   Filled = transition exists. Selected = active edit target.
+   ============================================================ */
+.transition-box {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translate(-50%, -50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  z-index: var(--z-snap-guide);
+  transition:
+    opacity var(--duration),
+    border-color var(--duration),
+    background var(--duration),
+    transform var(--duration);
+  user-select: none;
+}
+
+/* Empty — dashed hint, muted */
+.transition-box.empty {
+  background: transparent;
+  border: 1px dashed var(--muted-2);
+  opacity: 0.45;
+}
+
+.transition-box.empty:hover {
+  opacity: 1;
+  border-color: var(--accent);
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+.transition-box.empty svg {
+  color: var(--muted);
+}
+
+/* Filled — solid, accent */
+.transition-box.filled {
+  background: var(--panel-2);
+  border: 1px solid var(--accent-2);
+}
+
+.transition-box.filled svg {
+  color: var(--accent-2);
+}
+
+.transition-box.filled:hover {
+  transform: translate(-50%, -50%) scale(1.15);
+  border-color: var(--accent-2);
+}
+
+/* Selected */
+.transition-box.selected {
+  opacity: 1;
+  border-color: #fff;
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 4px 12px rgba(0, 0, 0, 0.5);
+  background: var(--panel-2);
+}
+
+.transition-box.selected svg {
+  color: var(--accent);
+}
+
+/* Locked track — non-interactive */
+.transition-box.locked {
+  cursor: not-allowed;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* ============================================================
+   HAND MODE (F14l)
+   ------------------------------------------------------------
+   Pan timeline: cursor grab/grabbing. Override cursor di semua
+   child (clip, trim, transition, ruler) via `*` descendant —
+   specificity 0,2,0 menang dari `.clip` (0,1,0) dkk.
+   ============================================================ */
+.tl-scroll.hand-mode,
+.tl-scroll.hand-mode * {
+  cursor: grab;
+}
+
+.tl-scroll.hand-mode.panning,
+.tl-scroll.hand-mode.panning * {
+  cursor: grabbing;
+}
+
+/* Transisi visual saat panning — subtle shadow biar terasa
+   "diangkat". */
+.tl-scroll.hand-mode.panning .tl-content {
+  box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.35);
+}

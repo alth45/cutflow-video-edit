@@ -1,0 +1,134 @@
+/* ============================================================
+   RESET
+   ------------------------------------------------------------
+   Normalisasi browser default yang HARUS konsisten di seluruh
+   modul. Tanpa reset, view yang di-generate via JS (F7–F11)
+   akan bawa default browser (margin h1, list-style ul, dsb.)
+   yang tidak diinginkan.
+
+   ATURAN:
+   - File ini murni normalization. TIDAK ada design tokens
+     (--bg, --text, dst.), TIDAK ada layout (.app, .panel).
+   - Body/html base styling (background, font, height) ada di
+     `layout.css` — tempatnya di sana karena bergantung pada
+     tokens.
+   - Setiap modul BOLEH menambah style sendiri, tapi reset ini
+     baseline yang harus stabil.
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   Box model — semua element pakai border-box, tanpa margin/padding
+   default browser. Ini yang paling fundamental: memungkinkan
+   `width: 100%` + `padding: 20px` bekerja seperti yang diharapkan.
+   ------------------------------------------------------------ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ------------------------------------------------------------
+   Text size adjust — di mobile Safari/Chrome, teks bisa
+   di-resize otomatis saat orientation change. Matikan supaya
+   UI tetap konsisten (walau Electron desktop, ini zero-cost
+   safety untuk layar sentuh / laptop hybrid).
+   ------------------------------------------------------------ */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* ------------------------------------------------------------
+   Media elements — display block + max-width.
+   Chromium default `inline` untuk img/svg → baseline gap ~4px
+   di bawah elemen (whitespace rendering). Di UI dark yang
+   presisi (film strip, thumbnail grid), gap ini merusak layout.
+   ------------------------------------------------------------ */
+img,
+svg,
+video,
+canvas,
+picture {
+  display: block;
+  max-width: 100%;
+}
+
+/* ------------------------------------------------------------
+   Form controls — warisi font & color dari parent, reset
+   border/background. Default Chromium: button/input punya
+   font-family sendiri (system-ui), border 2px inset, background
+   light gray — semua ini tidak cocok untuk dark UI.
+
+   Dengan `font: inherit`, komponen bisa override font per-element
+   tanpa khawatir reset.
+   ------------------------------------------------------------ */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+}
+
+button {
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* ------------------------------------------------------------
+   List — tanpa bullet / numbering. View kita tidak butuh
+   list semantik, dan default bullet (padding-left: 40px)
+   akan merusak layout flex/grid.
+   ------------------------------------------------------------ */
+ul,
+ol {
+  list-style: none;
+}
+
+/* ------------------------------------------------------------
+   Anchor — warisi color (tidak biru), tanpa underline.
+   Untuk app, link biru standar = visual noise. Kalau modul
+   butuh link dengan style khusus, tambah di komponennya.
+   ------------------------------------------------------------ */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ------------------------------------------------------------
+   Table — border-collapse standard. Dipakai di smoke test
+   (F2) & mungkin future inspector table.
+   ------------------------------------------------------------ */
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+/* ------------------------------------------------------------
+   Heading — inherit size & weight. Kalau kita generate `<h2>`
+   untuk section title, tidak boleh jadi 2em bold default
+   Chromium. Setiap heading yang butuh style, set via class.
+   ------------------------------------------------------------ */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+/* ------------------------------------------------------------
+   ::selection — highlight text dengan warna accent, bukan
+   default biru Chromium (#0078d7) yang mencolok di tema dark.
+   ------------------------------------------------------------ */
+::selection {
+  background: rgba(124, 92, 255, 0.35);
+  color: inherit;
+}

@@ -1,0 +1,109 @@
+/* ============================================================
+   MAIN STYLESHEET — BARREL IMPORT
+   ------------------------------------------------------------
+   Satu-satunya file CSS yang di-import dari `main.ts`:
+
+       // src/renderer/main.ts
+       import '@styles/main.css';
+
+   Vite akan:
+   1. Parse semua `@import` di sini.
+   2. Inline (atau bundle) semua file CSS referenced.
+   3. Generate satu file CSS di production.
+
+   URUTAN IMPORT SANGAT PENTING (cascade):
+   ------------------------------------------------------------
+   1. tokens.css     — custom properties (belum ada selector)
+   2. reset.css      — normalisasi browser default
+   3. layout.css     — base body, app grid, primitives
+   4. components/... — modul spesifik (bisa override primitives)
+
+   Kenapa tokens PERTAMA:
+   - Custom properties harus dideklarasikan sebelum dipakai.
+   - File CSS di-load sinkron, tapi `var()` resolve saat computed
+     style, bukan saat parse. Jadi secara teknis urutan tokens
+     tidak critical untuk `var()` — TAPI memudahkan debug
+     (lihat tokens dulu, baru consumer).
+
+   Kenapa reset SEBELUM layout:
+   - Reset menghapus default browser.
+   - Layout + components styling dengan asumsi reset sudah
+     diterapkan.
+   - Kalau reset setelah layout: layout dideklarasikan dulu,
+     lalu reset override → hasil akhir = layout tanpa default.
+
+   Kenapa components SETELAH layout:
+   - Components override selector primitives (`.panel`, `.btn`,
+     `.icon-btn`, `.tabs`, `.tab`).
+   - Specificity sama (satu class) → file yang datang belakangan
+     yang menang.
+   - Contoh: `.icon-btn` di layout = 30×30; `.th .th-btns
+     .icon-btn` di timeline.css = 20×20 (specificity lebih
+     tinggi, tapi juga karena order).
+
+   KENAPA `@import`, BUKAN `@layer`:
+   ------------------------------------------------------------
+   - `@layer` (CSS Cascade Layers) memungkinkan urutan cascade
+     yang lebih eksplisit. Tapi untuk project ini:
+       • Modul tidak butuh cross-layer override (tidak ada
+         "utilities must beat components" scenario).
+       • Vite support `@layer` di CSS, tapi compatibility
+         tooling (minifier, sourcemap) kadang bermasalah.
+       • `@import` lebih sederhana, behavior-nya sudah familiar
+         untuk semua developer CSS.
+   - Kalau nanti butuh (misal tambah utilities layer untuk
+     class `.mt-4` dsb.), migrasi ke `@layer` mudah — cukup
+     wrap deklarasi di masing-masing file dengan `@layer
+     tokens/reset/layout/components { ... }`.
+   ============================================================ */
+
+/* ============================================================
+   1. DESIGN TOKENS
+   ------------------------------------------------------------
+   Custom properties. Harus tersedia sebelum `var()` dipakai
+   di file lain (meski `var()` resolve saat computed style,
+   deklarasi di sini memastikan semua token tersedia).
+   ============================================================ */
+@import "./tokens.css";
+
+/* ============================================================
+   2. RESET
+   ------------------------------------------------------------
+   Normalisasi browser default. Semua view di-generate JS
+   butuh baseline yang predictable (margin 0, box-sizing
+   border-box, form controls inherit).
+   ============================================================ */
+@import "./reset.css";
+
+/* ============================================================
+   3. LAYOUT
+   ------------------------------------------------------------
+   Base body, `.app` grid, primitives (`.panel`, `.btn`,
+   `.icon-btn`, `.tabs`, `.tab`), scrollbar, `#boot`.
+   ============================================================ */
+@import "./layout.css";
+
+/* ============================================================
+   4. COMPONENTS
+   ------------------------------------------------------------
+   Satu file per modul UI. Modul bisa override primitives dari
+   layout.css (cascade order).
+   ============================================================ */
+
+/* Topbar — brand, menubar, dropdown, action buttons */
+@import "./components/topbar.css";
+
+/* Media panel — search, bin thumbnails, effects, transitions */
+@import "./components/media.css";
+
+/* Preview — stage 16:9 (container query), monitor, transport */
+@import "./components/preview.css";
+
+/* Inspector — accordion, sliders, switches, curve box */
+@import "./components/inspector.css";
+
+/* Timeline — toolbar, track headers, clips, playhead, ruler */
+@import "./components/timeline.css";
+
+/* Toast — floating notification */
+@import "./components/toast.css";

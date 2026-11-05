@@ -1,0 +1,269 @@
+/* ============================================================
+   INSPECTOR PANEL
+   ------------------------------------------------------------
+   Panel kanan: accordion groups berisi form controls (slider,
+   switch, curve). Grid area `inspector` (dari layout.css).
+
+   Struktur:
+     .inspector (aside)
+       ├── .panel-head (tabs — style di layout.css)
+       └── .panel-body
+             └── .group
+                  ├── .group-head    (judul + chevron)
+                  └── .group-body    (form controls)
+                       ├── .row            (label | slider | value)
+                       ├── .switch-row     (label | switch)
+                       └── .curve-box      (svg curve editor)
+
+   KONTROL KHUSUS:
+   - `input[type=range]` — custom styled slider dengan gradient
+     fill via `--val` custom property (di-set JS saat input).
+   - `.switch` — toggle button dengan knob bergerak.
+   ============================================================ */
+
+/* ============================================================
+   INSPECTOR CONTAINER
+   ------------------------------------------------------------
+   Grid area `inspector` + border kiri (memisahkan dari preview).
+   `.panel` base sudah handle flex column.
+   ============================================================ */
+.inspector {
+  grid-area: inspector;
+  border-left: 1px solid var(--line);
+}
+
+/* ============================================================
+   GROUP (accordion section)
+   ------------------------------------------------------------
+   Satu section collapsible. Border bawah memisahkan antar
+   section. `.collapsed` class di-toggle oleh controller (F10).
+   ============================================================ */
+.group {
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-7);
+  font-size: var(--text-size-120);
+  font-weight: var(--fw-semibold);
+  color: #c3cbdd;
+  cursor: pointer;
+  user-select: none; /* cegah text selection saat double-click toggle */
+  transition: color var(--duration);
+}
+
+.group-head:hover {
+  color: var(--text);
+}
+
+/* Chevron — rotate 180° saat expanded (bukan collapsed).
+   Default icon mengarah ke bawah (▼). Saat collapsed, rotate
+   -90° → mengarah ke kanan (▶) — indikasi "bisa expand". */
+.group-head .chev {
+  margin-left: auto;
+  color: var(--muted-2);
+  transition: transform var(--duration-slow) var(--easing);
+}
+
+.group.collapsed .chev {
+  transform: rotate(-90deg);
+}
+
+/* Body — hidden saat collapsed. `display: none` (bukan
+   max-height animation) karena:
+   - Lebih ringan (no layout calculation).
+   - Chevron rotation sudah memberi feedback animasi.
+   - Panel inspector scroll sendiri; animasi height bisa
+     cause reflow di semua section di bawahnya. */
+.group-body {
+  padding: var(--space-1) var(--space-7) var(--space-7);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.group.collapsed .group-body {
+  display: none;
+}
+
+/* ============================================================
+   ROW — label | slider | value
+   ------------------------------------------------------------
+   Grid 3 kolom dengan lebar tetap: 72px | 1fr | 36px.
+   - Kolom label: fixed 72px, teks kiri (konsisten lebar).
+   - Kolom slider: flexible, ambil sisa.
+   - Kolom value: fixed 36px, teks kanan (angka tabular).
+
+   Fixed value column mencegah layout "geser" saat angka
+   berubah dari `-100` ke `+100`.
+   ============================================================ */
+.row {
+  display: grid;
+  grid-template-columns: 72px 1fr 36px;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.row label {
+  font-size: var(--text-size-115);
+  color: var(--muted);
+}
+
+.row .val {
+  font-size: var(--text-size-110);
+  color: #c9d1e4;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   RANGE SLIDER — custom
+   ------------------------------------------------------------
+   Challenge: Chromium punya style default slider yang light-gray,
+   tidak cocok untuk tema dark.
+
+   Solution:
+   1. Reset -webkit-appearance.
+   2. Track = linear-gradient yang di-drive oleh `--val` custom
+      property. Bagian 0%..val% = accent, sisanya = abu gelap.
+   3. Thumb = bulat putih dengan border accent + glow ring.
+
+   `--val` di-set oleh controller (F10) setiap kali slider
+   berubah: `input.style.setProperty('--val', pct + '%')`.
+   Fallback 50% kalau belum di-set (visual middle state).
+   ============================================================ */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: var(--radius-full);
+  outline: 0;
+  background: linear-gradient(
+    90deg,
+    var(--accent) var(--val, 50%),
+    #2a3040 var(--val, 50%)
+  );
+  cursor: pointer;
+}
+
+/* Thumb — WebKit/Blink (Chromium, Electron) */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.18);
+  transition: box-shadow var(--duration);
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 0 5px rgba(124, 92, 255, 0.28);
+}
+
+/* Focus state — outline pada track, bukan thumb (thumb sudah
+   punya border accent, menambah outline akan crowded). */
+input[type="range"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+/* Thumb — Firefox (defensive, meski Electron = Chromium) */
+input[type="range"]::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--accent);
+}
+
+/* ============================================================
+   SWITCH — toggle
+   ------------------------------------------------------------
+   Custom switch: track 34×19 dengan knob 14×14 bergerak kiri ↔
+   kanan. `.on` class di-toggle oleh controller.
+
+   `transition: left` (bukan transform) karena knob diposisikan
+   via `left`. Alternatif pakai `transform: translateX()` lebih
+   performant (GPU), tapi sedikit lebih rumit karena butuh
+   override `left` base 0 (bukan 2.5px). Untuk satu elemen kecil,
+   tidak masalah.
+   ============================================================ */
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-size-115);
+  color: var(--muted);
+  padding: var(--space-1) 0;
+}
+
+.switch {
+  width: 34px;
+  height: 19px;
+  border-radius: var(--radius-full);
+  background: #2a3040;
+  position: relative;
+  border: 0;
+  flex: none;
+  cursor: pointer;
+  transition: background var(--duration);
+}
+
+/* Knob — diposisikan absolute di dalam track */
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2.5px;
+  left: 2.5px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition:
+    left var(--duration),
+    background var(--duration);
+}
+
+.switch.on {
+  background: rgba(124, 92, 255, 0.5);
+}
+
+.switch.on::after {
+  left: 17.5px;
+  background: #fff;
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   CURVE BOX
+   ------------------------------------------------------------
+   Area untuk color curve editor (SVG path). Layout sederhana:
+   background gelap, border subtle, tinggi fixed.
+
+   Interaksi kurva (drag node, add point) belum diimplementasi
+   di UI — hanya visual placeholder. Bisa di-enhance nanti.
+   ============================================================ */
+.curve-box {
+  height: 74px;
+  border-radius: var(--radius);
+  background: var(--panel-3);
+  border: 1px solid var(--line-soft);
+  position: relative;
+  overflow: hidden;
+}
+
+.curve-box svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}

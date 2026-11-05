@@ -1,0 +1,242 @@
+/* ============================================================
+   DESIGN TOKENS
+   ------------------------------------------------------------
+   Variabel desain global: warna, spacing, tipografi, radius,
+   z-index, shadow. Semua komponen (layout + modules) mengonsumsi
+   nilai dari sini — bukan hardcoded.
+
+   ATURAN:
+   - File ini HANYA mendeklarasikan custom properties.
+     Tidak ada selector yang apply style.
+   - Nilai warna diambil dari original `video-design.html`
+     `:root` block. Tambahan skala (spacing, z-index) disusun
+     konsisten dengan nilai warna tersebut.
+   - Prefix kategori:
+       --bg-*, --panel-*, --text-*, --accent-*, --danger-*,
+       --line-*, --space-*, --text-size-*, --radius-*,
+       --z-*, --shadow-*
+     untuk autocomplete & grep yang mudah.
+
+   URUTAN DEKLARASI:
+   1. Warna (base → semantik → interaktif)
+   2. Spacing
+   3. Typography
+   4. Radius
+   5. Shadows
+   6. Z-index
+   7. Motion
+   ============================================================ */
+
+:root {
+  /* ============================================================
+     COLORS — BASE
+     ------------------------------------------------------------
+     Latar belakang & panel. Hierarki:
+       bg       = paling luar (window / monitor stage)
+       panel    = panel utama (media, preview, inspector)
+       panel-2  = panel sekunder (toolbar, track header)
+       panel-3  = input, well, inset area
+     ============================================================ */
+  --bg: #0b0d12;
+  --panel: #12151d;
+  --panel-2: #171b26;
+  --panel-3: #0d1017;
+
+  /* ============================================================
+     COLORS — BORDERS
+     ------------------------------------------------------------
+     `--line`      : border standar antar panel / section
+     `--line-soft` : border antar sub-elemen dalam panel
+                     (track antar clip, list item divider)
+     ============================================================ */
+  --line: #222836;
+  --line-soft: #1a1f2b;
+
+  /* ============================================================
+     COLORS — TEXT
+     ------------------------------------------------------------
+     Tiga level hierarki teks + 1 untuk teks di atas accent.
+       text    : body utama, judul, nilai yang penting
+       muted   : label, deskripsi sekunder, icon default
+       muted-2 : hint, metadata, placeholder, divider teks
+       on-accent : teks di atas background accent (button primary)
+     ============================================================ */
+  --text: #e6e9f2;
+  --muted: #8b93a7;
+  --muted-2: #5c6478;
+  --on-accent: #ffffff;
+
+  /* ============================================================
+     COLORS — ACCENT & STATE
+     ------------------------------------------------------------
+     --accent   : brand utama (purple) — primary action, focus, selection
+     --accent-2 : brand sekunder (teal) — info, live indicator, success
+     --danger   : destructive (merah) — delete, error, playhead
+     ============================================================ */
+  --accent: #7c5cff;
+  --accent-2: #00d3a7;
+  --danger: #ff4d6d;
+
+  /* ============================================================
+     COLORS — CLIP (semantic aliases)
+     ------------------------------------------------------------
+     Mapping warna clip di timeline. Didefinisikan sebagai token
+     (bukan hex langsung) supaya:
+     - File project tetap pakai `colorToken` (string nama).
+     - CSS bisa override tema clip tanpa sentuh data.
+
+     Kelas `c-{token}` di `components/timeline.css` mengonsumsi
+     variabel ini.
+     ============================================================ */
+  --clip-purple: #7c5cff;
+  --clip-blue: #3b82f6;
+  --clip-orange: #fb923c;
+  --clip-teal: #14b8a6;
+  --clip-pink: #ec4899;
+  --clip-green: #22c55e;
+  --clip-cyan: #06b6d4;
+
+  /* ============================================================
+     SPACING
+     ------------------------------------------------------------
+     Skala 4px-base. Semua spacing (padding, margin, gap) di
+     komponen HARUS pakai token ini — bukan angka arbitrary.
+
+     Nama: `--space-N` di mana N = kelipatan 4px.
+     Untuk nilai ganjil (10px, 14px, 18px) yang sering muncul
+     di original, didefinisikan eksplisit agar grep-able.
+     ============================================================ */
+  --space-0: 0;
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 10px;
+  --space-6: 12px;
+  --space-7: 14px;
+  --space-8: 16px;
+  --space-9: 20px;
+  --space-10: 24px;
+  --space-11: 28px;
+  --space-12: 32px;
+  --space-14: 40px;
+
+  /* ============================================================
+     TYPOGRAPHY — FONT FAMILIES
+     ------------------------------------------------------------
+     --font-sans : UI text (Inter, fallback system)
+     --font-mono : timecode, angka numerik, code (SF Mono, Consolas)
+     ============================================================ */
+  --font-sans:
+    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* ============================================================
+     TYPOGRAPHY — FONT SIZES
+     ------------------------------------------------------------
+     Skala disusun dari original:
+       9.5px, 10px, 10.5px, 11px, 11.5px, 12px, 12.5px, 13px
+     Nama: `--text-size-N` di mana N = ukuran px × 10 (integer),
+     supaya konsisten & grep-friendly (bukan "sm"/"lg" abstrak).
+     ============================================================ */
+  --text-size-95: 9.5px; /* label micro (TC label) */
+  --text-size-100: 10px; /* durasi, sub-label di clip */
+  --text-size-105: 10.5px; /* clip label, sub info */
+  --text-size-110: 11px; /* metadata, label kecil */
+  --text-size-115: 11.5px; /* inspector label, row label */
+  --text-size-120: 12px; /* body kecil, list item name */
+  --text-size-125: 12.5px; /* body default (button, tab, menu) */
+  --text-size-130: 13px; /* body utama */
+  --text-size-135: 13.5px; /* brand, nilai penting */
+  --text-size-150: 15px; /* heading modal/card */
+  --text-size-180: 18px; /* heading besar (bootstrap) */
+
+  /* ============================================================
+     TYPOGRAPHY — FONT WEIGHTS
+     ------------------------------------------------------------
+     Hanya 3 level (bukan 100-900 penuh) — cukup untuk UI density
+     kita. Konsisten dengan original yang hanya pakai 400/600/700.
+     ============================================================ */
+  --fw-regular: 400;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* ============================================================
+     TYPOGRAPHY — LINE HEIGHT
+     ------------------------------------------------------------
+     `tight` untuk angka numerik (tabular-nums), `normal` untuk
+     body, `relaxed` untuk card dengan paragraf.
+     ============================================================ */
+  --lh-tight: 1.2;
+  --lh-normal: 1.5;
+  --lh-relaxed: 1.6;
+
+  /* ============================================================
+     TYPOGRAPHY — LETTER SPACING
+     ------------------------------------------------------------
+     `wide` untuk label uppercase (bin label, section title).
+     `normal` untuk body.
+     ============================================================ */
+  --ls-tight: -0.01em;
+  --ls-normal: 0;
+  --ls-wide: 0.7px;
+  --ls-wider: 0.8px;
+
+  /* ============================================================
+     RADIUS
+     ------------------------------------------------------------
+     Skala kecil → besar. Semua `border-radius` di komponen
+     gunakan token ini.
+     ============================================================ */
+  --radius-xs: 4px; /* badge, chip kecil */
+  --radius-sm: 6px; /* clip, thumbnail kecil */
+  --radius: 8px; /* button, input, panel-header */
+  --radius-md: 10px; /* panel, monitor, dropdown */
+  --radius-lg: 14px; /* card modal besar */
+  --radius-full: 999px; /* pill, switch, avatar */
+
+  /* ============================================================
+     SHADOWS
+     ------------------------------------------------------------
+     Kombinasi offset + blur + spread + warna. Semua warna
+     shadow = `rgba(0, 0, 0, X)` (pure black transparan),
+     kecuali `--shadow-accent` yang menyertakan glow warna accent.
+     ============================================================ */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 20px 45px rgba(0, 0, 0, 0.6); /* dropdown */
+  --shadow-accent: 0 4px 16px rgba(124, 92, 255, 0.4); /* primary button */
+  --shadow-accent-lg: 0 8px 28px rgba(124, 92, 255, 0.55); /* play button */
+
+  /* ============================================================
+     Z-INDEX SCALE
+     ------------------------------------------------------------
+     Semua `z-index` HARUS pakai token ini — mencegah nilai
+     arbitrary yang tabrakan.
+     ============================================================ */
+  --z-base: 0;
+  --z-sticky: 10; /* header sticky, track header */
+  --z-clip: 3; /* clip normal di track */
+  --z-clip-active: 20; /* playhead, clip ter-select */
+  --z-overlay: 50; /* play overlay, safe area */
+  --z-dropdown: 200; /* menu dropdown */
+  --z-modal: 500; /* dialog modal */
+  --z-toast: 1000; /* toast notification */
+
+  /* ============================================================
+     MOTION
+     ------------------------------------------------------------
+     Durasi & easing standar. Semua `transition` / `animation`
+     di komponen gunakan token ini untuk konsistensi "feel".
+     ============================================================ */
+  --duration-fast: 0.12s;
+  --duration: 0.15s;
+  --duration-slow: 0.25s;
+  --easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --easing-out: cubic-bezier(0.16, 1, 0.3, 1); /* "pop" */
+
+  /* ---- Z-index (tambahan F14b) ---- */
+  --z-snap-guide: 15; /* antara clip (3) dan playhead (20) */
+}

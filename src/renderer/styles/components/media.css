@@ -1,0 +1,335 @@
+/* ============================================================
+   MEDIA PANEL
+   ------------------------------------------------------------
+   Panel kiri: search, bin thumbnails, effects list, transitions
+   list. Grid area `media` (dari layout.css).
+
+   Struktur:
+     .media (aside)
+       ├── .panel-head    (tabs — style di layout.css)
+       ├── .search        (input search)
+       └── .panel-body
+             ├── .bin-label  (section header + count)
+             ├── .thumbs     (grid 2×N)
+             │    └── .thumb → .thumb-img (+ .dur) + .thumb-name
+             └── .list-item  (effects/transitions)
+                  ├── .swatch
+                  └── div → .li-name + .li-sub
+   ============================================================ */
+
+/* ============================================================
+   PANEL CONTAINER
+   ------------------------------------------------------------
+   Grid area `media` + border kanan (memisahkan dari preview).
+   `.panel` base dari layout.css sudah handle flex column.
+   ============================================================ */
+.media {
+  grid-area: media;
+  border-right: 1px solid var(--line);
+}
+
+/* ============================================================
+   SEARCH
+   ------------------------------------------------------------
+   Input dengan icon kiri, input flex, dan tombol `+` kanan.
+   Focus state = border accent — feedback jelas untuk keyboard user.
+   ============================================================ */
+.search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: var(--space-5) var(--space-5) var(--space-3);
+  padding: 0 var(--space-5);
+  height: 32px;
+  background: var(--panel-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--muted-2);
+  transition: border-color var(--duration);
+}
+
+.search:focus-within {
+  border-color: rgba(124, 92, 255, 0.6);
+}
+
+.search input {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font-size: var(--text-size-125);
+  color: var(--text);
+  min-width: 0; /* flex shrink fix — lihat catatan */
+}
+
+.search input::placeholder {
+  color: var(--muted-2);
+}
+
+/* ============================================================
+   BIN LABEL
+   ------------------------------------------------------------
+   Section header (mis. "Bin — Footage") dengan count badge
+   di kanan (mis. "8"). Uppercase + letter-spacing untuk
+   hierarki visual jelas terhadap item di bawahnya.
+   ============================================================ */
+.bin-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-7) var(--space-3);
+  font-size: var(--text-size-110);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-wide);
+  color: var(--muted-2);
+  font-weight: var(--fw-semibold);
+}
+
+.bin-label span {
+  margin-left: auto;
+  background: #1e2431;
+  color: var(--muted);
+  border-radius: var(--radius-full);
+  padding: 1px 7px;
+  font-size: var(--text-size-100);
+  letter-spacing: 0;
+  font-weight: var(--fw-regular);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   THUMBS GRID
+   ------------------------------------------------------------
+   Grid 2 kolom untuk card thumbnail. Gap 9px — preserve dari
+   original (bukan kelipatan 4, tapi visual rhythm sudah
+   pas: 9px memberi "breathing room" antar card tanpa terlalu
+   longgar).
+   ============================================================ */
+.thumbs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  padding: var(--space-1) var(--space-5) var(--space-7);
+}
+
+/* ============================================================
+   THUMB CARD
+   ------------------------------------------------------------
+   `.thumb` = wrapper card (draggable).
+   `.thumb-img` = area gambar 16:10 (border + gradient placeholder).
+   `.thumb-name` = nama file di bawah.
+   `.dur` = badge durasi di pojok kanan-bawah.
+
+   Hover: border accent + glow + lift. Feedback jelas untuk
+   affordance "bisa di-drag".
+   ============================================================ */
+.thumb {
+  cursor: grab;
+}
+
+.thumb:active {
+  cursor: grabbing;
+}
+
+.thumb-img {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  transition:
+    border-color var(--duration),
+    box-shadow var(--duration),
+    transform var(--duration);
+}
+
+/* Overlay gradient dari bawah untuk membuat `.dur` badge
+   selalu terbaca — override warna apapun di belakangnya. */
+.thumb-img::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 45%, rgba(0, 0, 0, 0.6));
+  pointer-events: none;
+}
+
+.thumb:hover .thumb-img {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 2px rgba(124, 92, 255, 0.25),
+    0 6px 18px rgba(0, 0, 0, 0.4);
+  transform: translateY(-1px);
+}
+
+/* Duration badge di pojok kanan-bawah thumb-img. Z-index 2
+   untuk memastikan di atas overlay ::after. */
+.dur {
+  position: absolute;
+  right: var(--space-2);
+  bottom: var(--space-2);
+  z-index: 2;
+  font-size: var(--text-size-100);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-xs);
+  background: rgba(0, 0, 0, 0.7);
+  color: #cfd6e6;
+  font-variant-numeric: tabular-nums;
+}
+
+.thumb-name {
+  font-size: var(--text-size-110);
+  color: var(--muted);
+  margin-top: var(--space-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================================
+   GRADIENT PLACEHOLDERS (thumbnail footage)
+   ------------------------------------------------------------
+   8 gradient preset untuk placeholder sebelum thumbnail asli
+   tersedia. Modul media view akan assign class `.g1`–`.g8`
+   berdasarkan `asset.colorIndex` atau hash nama file.
+
+   Sengaja hardcoded (bukan token) karena:
+   - Dekoratif, bukan warna semantik (tidak dipakai di luar
+     thumbnail).
+   - Nanti akan digantikan oleh real thumbnail dari video frame.
+   - Menyimpan di token = 8 token warna yang redundan.
+   ============================================================ */
+.g1 {
+  background: linear-gradient(135deg, #ff8a4c, #ff3d71);
+}
+.g2 {
+  background: linear-gradient(135deg, #3ec6ff, #5b6cff);
+}
+.g3 {
+  background: linear-gradient(135deg, #00d3a7, #00a3ff);
+}
+.g4 {
+  background: linear-gradient(135deg, #b06cff, #ff5cad);
+}
+.g5 {
+  background: linear-gradient(135deg, #ffd166, #ff8a4c);
+}
+.g6 {
+  background: linear-gradient(135deg, #4cc9f0, #4361ee);
+}
+.g7 {
+  background: linear-gradient(135deg, #8ac926, #00b894);
+}
+.g8 {
+  background: linear-gradient(135deg, #ff6b6b, #c44dff);
+}
+
+/* ============================================================
+   LIST ITEM (effects / transitions)
+   ------------------------------------------------------------
+   Baris item dengan swatch kecil di kiri + dua baris teks
+   (nama & sub-kategori). Hover: border accent + background
+   slightly lighter — feedback "bisa di-drag".
+
+   `cursor: grab` sama dengan `.thumb` — konsisten:
+   semua item draggable di media panel pakai grab cursor.
+   ============================================================ */
+.list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  margin: 0 var(--space-5) var(--space-3);
+  padding: 9px var(--space-5);
+  background: var(--panel-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  cursor: grab;
+  transition:
+    border-color var(--duration),
+    background var(--duration);
+}
+
+.list-item:active {
+  cursor: grabbing;
+}
+
+.list-item:hover {
+  border-color: var(--accent);
+  background: #1b2030;
+}
+
+/* Swatch — kotak kecil 26×26 dengan gradient. Class gradient
+   bisa digabung: `<div class="swatch g4"></div>` untuk warna
+   ungu-pink, atau custom background via inline style nanti. */
+.list-item .swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  flex: none;
+}
+
+.list-item .li-name {
+  font-size: var(--text-size-120);
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.list-item .li-sub {
+  font-size: var(--text-size-105);
+  color: var(--muted-2);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* ============================================================
+   EMPTY STATE
+   ------------------------------------------------------------
+   Tampil saat bin kosong (belum import) atau saat search tidak
+   menemukan hasil. Sederhana, tidak mengganggu — hanya feedback.
+   ============================================================ */
+.bin-empty {
+  padding: var(--space-10) var(--space-7);
+  text-align: center;
+  color: var(--muted-2);
+  font-size: var(--text-size-115);
+  line-height: 1.6;
+  font-style: italic;
+}
+
+/* ============================================================
+   REAL MEDIA PREVIEW (F14b++)
+   ------------------------------------------------------------
+   `<img>` dan `<video>` mengisi thumb-img sepenuhnya dengan
+   object-fit cover. `background: #000` = fallback saat loading
+   (hindari putih flash).
+   ============================================================ */
+.thumb-img img,
+.thumb-img video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #000;
+  /* Video: jangan ada subtitle track kontrol */
+  pointer-events: none;
+}
+
+/* Audio: music icon di tengah (di atas gradient). */
+.thumb-img .thumb-audio-icon {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.75);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.thumb-img .thumb-audio-icon svg {
+  width: 26px;
+  height: 26px;
+  stroke-width: 1.5;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}

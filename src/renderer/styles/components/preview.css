@@ -1,0 +1,412 @@
+/* ============================================================
+   PREVIEW
+   ------------------------------------------------------------
+   Panel tengah: header sequence, stage 16:9, transport controls.
+
+   Struktur:
+     .preview (grid area preview, flex column)
+       ├── .preview-head    (sequence title + actions)
+       ├── .stage           (container query context)
+       │    └── .monitor    (aspect-ratio 16:9, fit ke stage)
+       │         ├── .monitor-inner (sunset scene: bg + sun + hills)
+       │         ├── .safe-area    (dashed overlay)
+       │         └── .play-overlay (center play button)
+       └── .transport       (grid 3-kolom: current | controls | duration)
+
+   FITUR CSS PENTING:
+   - Container queries (`container-type: size`) untuk auto-fit
+     16:9 monitor tanpa JS resize listener.
+   - `min(100cqw, calc(100cqh * 16 / 9))` — pilih dimensi
+     pembatas, sesuai rasio.
+   - Layered gradients + clip-path polygon untuk scene "sunset".
+   ============================================================ */
+
+/* ============================================================
+   PREVIEW CONTAINER
+   ------------------------------------------------------------
+   Grid area `preview`, flex column (head | stage | transport).
+   `min-height: 0` + `min-width: 0` — wajib karena parent
+   grid pakai `minmax(0, 1fr)`: tanpa ini, preview bisa
+   "menolak menyusut" dan mendorong layout.
+   ============================================================ */
+.preview {
+  grid-area: preview;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  background: var(--bg);
+}
+
+/* ============================================================
+   PREVIEW HEAD
+   ------------------------------------------------------------
+   Bar atas: nama sequence + meta (resolution · fps) + action
+   buttons (volume, fullscreen) di kanan.
+   ============================================================ */
+.preview-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  height: 40px;
+  padding: 0 var(--space-7);
+  flex: none;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.seq-title {
+  font-size: var(--text-size-125);
+  font-weight: var(--fw-semibold);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+/* Dot separator antar "Sequence 01" dan meta info */
+.seq-title .dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--muted-2);
+  flex: none;
+}
+
+.seq-title .meta {
+  font-weight: var(--fw-regular);
+  color: var(--muted-2);
+  font-size: var(--text-size-115);
+}
+
+.preview-head .actions {
+  margin-left: auto;
+  display: flex;
+  gap: var(--space-1);
+}
+
+/* ============================================================
+   STAGE — CONTAINER QUERY CONTEXT
+   ------------------------------------------------------------
+   Wrapper untuk monitor. Di sini adalah "trik" untuk fit 16:9
+   tanpa JS resize:
+
+   `container-type: size` — menandai .stage sebagai container
+   untuk BOTH inline-size dan block-size queries.
+
+   `.monitor` di dalamnya bisa pakai `cqw` (1% container inline-
+   size) dan `cqh` (1% container block-size) di dalam `min()`.
+   Hasilnya: monitor otomatis pilih dimensi pembatas (lebar
+   vs tinggi) untuk tetap 16:9 — TANPA resize listener JS.
+
+   Padding 16px memberi "breathing room" visual di sekitar
+   monitor (letterbox effect).
+   ============================================================ */
+.stage {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-8);
+  overflow: hidden;
+  container-type: size;
+}
+
+/* ============================================================
+   MONITOR
+   ------------------------------------------------------------
+   Canvas 16:9 yang memuat scene. Kunci sizing:
+     width: min(100cqw, calc(100cqh * 16 / 9))
+   Artinya: ambil yang lebih kecil antara:
+   - 100% lebar container (cqw = container width)
+   - 100% tinggi container × 16/9 (untuk fit 16:9 di tinggi)
+
+   `aspect-ratio: 16/9` — memastikan tinggi mengikuti lebar.
+   `overflow: hidden` — clip konten ke border-radius.
+   ============================================================ */
+.monitor {
+  position: relative;
+  width: min(100cqw, calc(100cqh * 16 / 9));
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #000; /* letterbox black; hanya terlihat saat loading/error */
+  box-shadow:
+    var(--shadow-lg),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* ============================================================
+   MONITOR-INNER — SCENE
+   ------------------------------------------------------------
+   Layered backgrounds untuk "sunset landscape" placeholder:
+
+   Layer (dari atas ke bawah):
+   1. Radial glow kanan-atas (sunlight aurora)
+   2. Radial glow tengah-bawah (warm foreground)
+   3. Linear gradient (sky → horizon → ground)
+
+   Layer di paling bawah = linear gradient (base scene), di
+   atasnya glow radial yang menambah "atmosphere".
+   ============================================================ */
+.monitor-inner {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      closest-side at 76% 26%,
+      rgba(255, 228, 168, 0.75),
+      transparent 100%
+    ),
+    radial-gradient(
+      closest-side at 50% 108%,
+      rgba(255, 132, 64, 0.55),
+      transparent 100%
+    ),
+    linear-gradient(180deg, #16233f 0%, #3a3a68 42%, #9c5570 72%, #f2a76b 100%);
+}
+
+/* ============================================================
+   SUN
+   ------------------------------------------------------------
+   Disk matahari di posisi 72%/22%. Ukuran relative ke monitor
+   (9% width). Filter blur 1px untuk softening edge — mengurangi
+   "hard pixel" look pada layar high-DPI.
+   ============================================================ */
+.monitor-inner .sun {
+  position: absolute;
+  left: 72%;
+  top: 22%;
+  width: 9%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    #fff3cf,
+    #ffcf7a 55%,
+    rgba(255, 190, 90, 0) 72%
+  );
+  filter: blur(1px);
+}
+
+/* ============================================================
+   HILLS — MOUNTAIN SILHOUETTE
+   ------------------------------------------------------------
+   `clip-path: polygon(...)` membuat bentuk "pegunungan" dari
+   rect yang kita beri gradient. Polygon didefinisikan dalam
+   persen (0-100), membentuk siluet acak.
+
+   `inset: auto 0 0 0` = shorthand untuk:
+     top: auto; right: 0; bottom: 0; left: 0
+   Artinya stick ke bawah, span full width.
+   ============================================================ */
+.monitor-inner .hills {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 34%;
+  background: linear-gradient(180deg, #2a2340, #14101f);
+  clip-path: polygon(
+    0 62%,
+    12% 44%,
+    24% 58%,
+    37% 30%,
+    52% 55%,
+    66% 38%,
+    80% 60%,
+    92% 46%,
+    100% 58%,
+    100% 100%,
+    0 100%
+  );
+  opacity: 0.92;
+}
+
+/* Varian hills kedua — lebih jauh, lebih terang (aerial perspective),
+   lebih kecil tinggi. Diletakkan di belakang (.h2 adalah DOM
+   sibling yang muncul duluan, sehingga paint order di bawah). */
+.monitor-inner .hills.h2 {
+  height: 22%;
+  opacity: 0.65;
+  background: linear-gradient(180deg, #3d2f52, #1b1529);
+  clip-path: polygon(
+    0 70%,
+    18% 40%,
+    34% 66%,
+    50% 44%,
+    68% 68%,
+    84% 46%,
+    100% 64%,
+    100% 100%,
+    0 100%
+  );
+}
+
+/* ============================================================
+   SAFE AREA
+   ------------------------------------------------------------
+   Overlay dashed untuk "title-safe" / "action-safe" guide
+   (standar broadcast — konten penting harus di dalam area ini).
+
+   `inset: 6%` = inset 6% dari keempat sisi. `pointer-events:
+   none` agar tidak menangkap klik.
+   ============================================================ */
+.safe-area {
+  position: absolute;
+  inset: 6%;
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-xs);
+  pointer-events: none;
+}
+
+/* ============================================================
+   PLAY OVERLAY
+   ------------------------------------------------------------
+   Overlay gelap semi-transparan dengan tombol play di tengah.
+   Terlihat saat paused; fade out saat playing.
+
+   `.hide` class di-toggle oleh controller (F9). `pointer-events:
+   none` pada .hide PENTING — tanpa itu, overlay transparan tetap
+   menangkap klik, dan monitor tidak bisa di-klik untuk pause.
+   ============================================================ */
+.play-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(5, 7, 12, 0.28);
+  opacity: 1;
+  transition: opacity var(--duration-slow);
+}
+
+.play-overlay.hide {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.play-overlay button {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: rgba(124, 92, 255, 0.9);
+  box-shadow: var(--shadow-accent-lg);
+  transition:
+    transform var(--duration),
+    background var(--duration);
+  color: var(--on-accent); /* ← TAMBAH */
+}
+
+.play-overlay button:hover {
+  transform: scale(1.07);
+  background: #8b6dff;
+}
+
+/* Ikon play perlu margin-left 3px untuk optis centered —
+   segitiga "play" secara visual lebih berat ke kiri. */
+/* .play-overlay svg {
+  width: 22px;
+  height: 22px;
+  fill: var(--on-accent);
+  margin-left: 3px;
+} */
+
+/* ============================================================
+   TRANSPORT
+   ------------------------------------------------------------
+   Bar bawah: timecode current (kiri) | controls (tengah) |
+   timecode duration (kanan).
+
+   Grid 3 kolom `1fr auto 1fr` — kolom tengah (controls) selalu
+   di center geometris, terlepas dari lebar teks timecode kiri
+   dan kanan.
+   ============================================================ */
+.transport {
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-4) var(--space-7);
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+}
+
+/* Timecode group — label kecil di atas, nilai numerik di bawah */
+.tc-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.tc-group.right {
+  align-items: flex-end;
+}
+
+.tc-label {
+  font-size: var(--text-size-95);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-wider);
+  color: var(--muted-2);
+  font-weight: var(--fw-semibold);
+}
+
+.tc {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  font-size: var(--text-size-125);
+  color: #c9d1e4;
+}
+
+/* Current time = accent teal (membedakan dari duration yang muted) */
+.tc.live {
+  color: var(--accent-2);
+}
+
+/* ============================================================
+   TRANSPORT CONTROLS
+   ------------------------------------------------------------
+   5 tombol berbaris: skip-start, step-back, play, step-fwd,
+   skip-end. Gap 3px antar icon + play-btn punya margin
+   tambahan 4px → membuat play button "dominan" secara visual.
+   ============================================================ */
+.transport-controls {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.play-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: linear-gradient(135deg, var(--accent), #5b6cff);
+  box-shadow: 0 5px 18px rgba(124, 92, 255, 0.45);
+  margin: 0 var(--space-2);
+  transition:
+    filter var(--duration),
+    transform var(--duration);
+  color: var(--on-accent); /* ← TAMBAH */
+}
+
+.play-btn:hover {
+  filter: brightness(1.12);
+  transform: scale(1.04);
+}
+
+.play-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.5;
+}
+
+.play-overlay svg {
+  width: 22px;
+  height: 22px;
+  margin-left: 3px;
+  stroke-width: 2.5;
+}
