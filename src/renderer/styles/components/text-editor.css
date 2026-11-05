@@ -1,0 +1,75 @@
+/* ============================================================
+   TEXT EDITOR MODAL
+   ============================================================ */
+
+.text-editor-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: grid;
+  place-items: center;
+  z-index: var(--z-modal);
+  animation: fadeIn var(--duration-fast) ease-out;
+}
+
+.text-editor-modal {
+  width: min(420px, 90vw);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-7);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  animation: modalIn var(--duration) var(--easing-out);
+}
+
+.text-editor-title {
+  font-size: var(--text-size-125);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+}
+
+.text-editor-input {
+  width: 100%;
+  min-height: 80px;
+  padding: var(--space-4) var(--space-5);
+  background: var(--panel-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-size-130);
+  line-height: var(--lh-normal);
+  resize: vertical;
+  outline: none;
+  transition: border-color var(--duration);
+}
+
+.text-editor-input:focus {
+  border-color: var(--accent);
+}
+
+.text-editor-input::placeholder {
+  color: var(--muted-2);
+}
+
+.text-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-8px);
+  }
+}

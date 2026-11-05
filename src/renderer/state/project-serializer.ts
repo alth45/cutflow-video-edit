@@ -1,5 +1,9 @@
 import type { Project } from "@shared/types/project";
 import { PROJECT_SCHEMA_VERSION } from "@shared/types/project";
+import {
+  DEFAULT_CLIP_TRANSFORM,
+  DEFAULT_CLIP_COLOR,
+} from "@shared/types/timeline";
 
 /* ============================================================
    PROJECT SERIALIZER
@@ -80,10 +84,26 @@ export function parseProject(json: string): ParseProjectResult {
   const normalizedTracks = (s["tracks"] as unknown[]).map((t) => {
     if (!t || typeof t !== "object") return t;
     const track = t as Record<string, unknown>;
-    if (!Array.isArray(track["transitions"])) {
-      return { ...track, transitions: [] };
-    }
-    return track;
+
+    const transitions = Array.isArray(track["transitions"])
+      ? track["transitions"]
+      : [];
+
+    const clipsRaw = track["clips"];
+
+    const clips = Array.isArray(clipsRaw)
+      ? clipsRaw.map((c) => {
+          if (!c || typeof c !== "object") return c;
+          const clip = c as Record<string, unknown>;
+          const patched: Record<string, unknown> = { ...clip };
+          if (!patched["transform"])
+            patched["transform"] = DEFAULT_CLIP_TRANSFORM;
+          if (!patched["color"]) patched["color"] = DEFAULT_CLIP_COLOR;
+          return patched;
+        })
+      : clipsRaw;
+
+    return { ...track, clips, transitions };
   });
   s["tracks"] = normalizedTracks;
 

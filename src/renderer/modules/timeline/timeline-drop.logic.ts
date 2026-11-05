@@ -2,7 +2,10 @@ import { makeId } from "@utils/id";
 import type { MediaAsset, MediaAssetKind } from "@shared/types/project";
 import type { Clip, ClipColorToken, TrackKind } from "@shared/types/timeline";
 import { TIMELINE } from "@shared/constants";
-/* ============================================================
+import {
+  DEFAULT_CLIP_TRANSFORM,
+  DEFAULT_CLIP_COLOR,
+} from "@shared/types/timeline"; /* ============================================================
    DROP LOGIC — pure functions
    ------------------------------------------------------------
    Mapping asset → clip dengan default duration, warna
@@ -107,6 +110,8 @@ export function buildClipFromAsset(asset: MediaAsset, startSec: number): Clip {
     startSec: roundToTenth(clampedStart),
     durationSec: roundToTenth(durationSec),
     colorToken: pickClipColor(asset.name),
+    transform: DEFAULT_CLIP_TRANSFORM,
+    color: DEFAULT_CLIP_COLOR, 
   };
 
   if (kind === "audio") {

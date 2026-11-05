@@ -71,6 +71,55 @@ export type ClipColorToken =
      Tidak butuh MediaAsset.
    ============================================================ */
 
+/* ============================================================
+   CLIP TRANSFORM
+   ------------------------------------------------------------
+   Properti visual yang bisa diatur via inspector. Semua clip
+   (video/text) punya transform. Audio tidak render visual,
+   tapi field tetap ada (default) untuk konsistensi schema.
+   ============================================================ */
+export interface ClipTransform {
+  readonly positionX: number; // -100..100
+  readonly positionY: number; // -100..100
+  readonly scale: number; // 10..200
+  readonly rotation: number; // -180..180
+  readonly opacity: number; // 0..100
+  readonly cropLeft: number; // 0..50
+  readonly cropRight: number; // 0..50
+  readonly featherEdge: boolean;
+}
+
+export const DEFAULT_CLIP_TRANSFORM: ClipTransform = Object.freeze({
+  positionX: 0,
+  positionY: 0,
+  scale: 100,
+  rotation: 0,
+  opacity: 100,
+  cropLeft: 0,
+  cropRight: 0,
+  featherEdge: false,
+});
+
+/* ============================================================
+   CLIP COLOR
+   ------------------------------------------------------------
+   Color correction properti. Default = neutral (tidak ada
+   filter applied).
+   ============================================================ */
+export interface ClipColor {
+  readonly exposure: number; // -100..100 → brightness 0.5..1.5
+  readonly contrast: number; // -100..100 → contrast 0.5..1.5
+  readonly saturation: number; // 0..200   → saturate 0..2
+  readonly temp: number; // -100..100 → overlay cool/warm tint
+}
+
+export const DEFAULT_CLIP_COLOR: ClipColor = Object.freeze({
+  exposure: 0,
+  contrast: 0,
+  saturation: 100,
+  temp: 0,
+});
+
 /** Clip yang sumbernya file media. */
 export interface MediaClipSource {
   readonly kind: "media";
@@ -134,6 +183,8 @@ interface ClipBase {
   readonly durationSec: number;
   /** Token warna → kelas CSS `c-${token}`. */
   readonly colorToken: ClipColorToken;
+  readonly transform: ClipTransform;
+  readonly color: ClipColor;
 }
 
 /**

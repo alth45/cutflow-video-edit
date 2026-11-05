@@ -6,12 +6,15 @@ import {
   type GroupDef,
   type RowDef,
   type SliderRow,
+  type SwitchRow,
+  type TabDef,
 } from "./inspector.logic";
 import type { AppState, InspectorPanelTab } from "@shared/types/state";
-
-/* ============================================================
-   INSPECTOR VIEW
-   ============================================================ */
+import type { Clip, ClipTransform, ClipColor } from "@shared/types/timeline";
+import {
+  DEFAULT_CLIP_TRANSFORM,
+  DEFAULT_CLIP_COLOR,
+} from "@shared/types/timeline";
 
 export interface SliderRef {
   readonly input: HTMLInputElement;
@@ -19,26 +22,35 @@ export interface SliderRef {
   readonly def: SliderRow;
 }
 
-export interface InspectorView {
-  readonly root: HTMLElement;
-  readonly tabButtons: ReadonlyMap<InspectorPanelTab, HTMLButtonElement>;
-  readonly panes: ReadonlyMap<InspectorPanelTab, HTMLElement>;
-  readonly groupEls: ReadonlyMap<string, HTMLElement>;
-  readonly sliders: ReadonlyMap<HTMLInputElement, SliderRef>;
+export interface SwitchRef {
+  readonly button: HTMLButtonElement;
+  readonly def: SwitchRow;
 }
 
-export function renderInspector(state: AppState): InspectorView {
+export interface InspectorView {
+  readonly root: HTMLElement;
+  readonly panelBody: HTMLElement;
+  readonly tabButtons: ReadonlyMap<InspectorPanelTab, HTMLButtonElement>;
+  readonly panes: ReadonlyMap<InspectorPanelTab, HTMLElement>;
+  readonly groupEls: Map<string, HTMLElement>;
+  readonly sliders: Map<HTMLInputElement, SliderRef>;
+  readonly switches: Map<HTMLButtonElement, SwitchRef>;
+}
+
+export function renderInspector(
+  initial: AppState,
+  activeClip: Clip | undefined,
+): InspectorView {
   const root = el("div");
   root.style.cssText =
     "display:flex;flex-direction:column;height:100%;min-height:0;";
 
-  /* ---------- Head: tabs ---------- */
   const head = el("div", { className: "panel-head" });
   const tabs = el("div", { className: "tabs" });
   const tabButtons = new Map<InspectorPanelTab, HTMLButtonElement>();
 
   for (const tabDef of INSPECTOR_TABS) {
-    const isActive = state.ui.inspector.activeTab === tabDef.id;
+    const isActive = initial.ui.inspector.activeTab === tabDef.id;
     const btn = el("button", {
       className: `tab${isActive ? " active" : ""}`,
       text: tabDef.label,
@@ -49,34 +61,71 @@ export function renderInspector(state: AppState): InspectorView {
   }
   head.append(tabs);
 
-  /* ---------- Body: panes ---------- */
-  const body = el("div", { className: "panel-body" });
+  const panelBody = el("div", { className: "panel-body" });
   const panes = new Map<InspectorPanelTab, HTMLElement>();
-  const groupEls = new Map<string, HTMLElement>();
-  const sliders = new Map<HTMLInputElement, SliderRef>();
 
   for (const tabDef of INSPECTOR_TABS) {
     const pane = el("div");
     pane.dataset["pane"] = tabDef.id;
-    pane.hidden = state.ui.inspector.activeTab !== tabDef.id;
+    pane.hidden = initial.ui.inspector.activeTab !== tabDef.id;
+    panes.set(tabDef.id, pane);
+    panelBody.append(pane);
+  }
 
+  root.append(head, panelBody);
+
+  const view: InspectorView = {
+    root,
+    panelBody,
+    tabButtons,
+    panes,
+    groupEls: new Map(),
+    sliders: new Map(),
+    switches: new Map(),
+  };
+
+  /* Populasi awal + set clip-inactive */
+  updatePaneContents(view, initial, activeClip);
+  updateClipInactive(view, activeClip);
+
+  return view;
+}
+
+export function updatePaneContents(
+  view: InspectorView,
+  state: AppState,
+  activeClip: Clip | undefined,
+): void {
+  view.groupEls.clear();
+  view.sliders.clear();
+  view.switches.clear();
+
+  const collapsed = state.ui.inspector.collapsedGroups;
+
+  for (const tabDef of INSPECTOR_TABS) {
+    const pane = view.panes.get(tabDef.id);
+    if (!pane) continue;
+    pane.replaceChildren();
     for (const groupDef of tabDef.groups) {
       const groupEl = renderGroup(
         groupDef,
-        state.ui.inspector.collapsedGroups.includes(groupDef.id),
-        sliders,
+        collapsed.includes(groupDef.id),
+        activeClip,
+        view.sliders,
+        view.switches,
       );
-      groupEls.set(groupDef.id, groupEl);
+      view.groupEls.set(groupDef.id, groupEl);
       pane.append(groupEl);
     }
-
-    panes.set(tabDef.id, pane);
-    body.append(pane);
   }
+}
 
-  root.append(head, body);
-
-  return { root, tabButtons, panes, groupEls, sliders };
+export function updateClipInactive(
+  view: InspectorView,
+  activeClip: Clip | undefined,
+): void {
+  const isActive = activeClip !== undefined && activeClip.kind !== "audio";
+  view.panelBody.classList.toggle("clip-inactive", !isActive);
 }
 
 /* ============================================================
@@ -86,26 +135,24 @@ export function renderInspector(state: AppState): InspectorView {
 function renderGroup(
   def: GroupDef,
   collapsed: boolean,
+  activeClip: Clip | undefined,
   slidersOut: Map<HTMLInputElement, SliderRef>,
+  switchesOut: Map<HTMLButtonElement, SwitchRef>,
 ): HTMLElement {
   const group = el("div", {
     className: `group${collapsed ? " collapsed" : ""}`,
   });
   group.dataset["group"] = def.id;
 
-  /* Head */
   const head = el("div", { className: "group-head" });
   head.append(document.createTextNode(def.label));
-
   const chev = createIcon("chevron", "ic chev");
   chev.style.cssText = "width:14px;height:14px;";
   head.append(chev);
 
-  /* Body */
   const body = el("div", { className: "group-body" });
-
   for (const row of def.rows) {
-    body.append(renderRow(row, slidersOut));
+    body.append(renderRow(row, activeClip, slidersOut, switchesOut));
   }
 
   group.append(head, body);
@@ -118,69 +165,115 @@ function renderGroup(
 
 function renderRow(
   row: RowDef,
+  activeClip: Clip | undefined,
   slidersOut: Map<HTMLInputElement, SliderRef>,
+  switchesOut: Map<HTMLButtonElement, SwitchRef>,
 ): HTMLElement {
   switch (row.kind) {
     case "slider":
-      return renderSliderRow(row, slidersOut);
+      return renderSliderRow(row, activeClip, slidersOut);
     case "switch":
-      return renderSwitchRow(row.label, row.on);
+      return renderSwitchRow(row, activeClip, switchesOut);
     case "curve":
       return renderCurveRow();
   }
 }
 
+function readTransformValue<K extends keyof ClipTransform>(
+  activeClip: Clip | undefined,
+  key: K,
+  fallback: ClipTransform[K],
+): ClipTransform[K] {
+  if (!activeClip) return fallback;
+  return (activeClip.transform ?? DEFAULT_CLIP_TRANSFORM)[key];
+}
+
+function readColorValue<K extends keyof ClipColor>(
+  activeClip: Clip | undefined,
+  key: K,
+  fallback: ClipColor[K],
+): ClipColor[K] {
+  if (!activeClip) return fallback;
+  return (activeClip.color ?? DEFAULT_CLIP_COLOR)[key];
+}
+
 function renderSliderRow(
   row: SliderRow,
+  activeClip: Clip | undefined,
   slidersOut: Map<HTMLInputElement, SliderRef>,
 ): HTMLElement {
-  const wrap = el("div", { className: "row" });
+  const wrap = el("div", {
+    className: `row${row.disabled ? " disabled" : ""}`,
+  });
 
   const label = el("label", { text: row.label });
+
+  let currentValue: number = row.defaultValue;
+  if (row.transformKey) {
+    currentValue = readTransformValue(
+      activeClip,
+      row.transformKey,
+      row.defaultValue,
+    ) as number;
+  } else if (row.colorKey) {
+    currentValue = readColorValue(
+      activeClip,
+      row.colorKey,
+      row.defaultValue,
+    ) as number;
+  }
 
   const input = el("input", {
     attrs: {
       type: "range",
       min: String(row.min),
       max: String(row.max),
-      value: String(row.value),
+      value: String(currentValue),
     },
   });
   input.style.setProperty(
     "--val",
-    `${sliderPercent(row.value, row.min, row.max)}%`,
+    `${sliderPercent(currentValue, row.min, row.max)}%`,
   );
+  if (row.disabled) input.disabled = true;
 
   const valueEl = el("span", {
     className: "val",
-    text: row.format(row.value),
+    text: row.format(currentValue),
   });
 
   wrap.append(label, input, valueEl);
-
   slidersOut.set(input, { input, valueEl, def: row });
   return wrap;
 }
 
-function renderSwitchRow(label: string, on: boolean): HTMLElement {
-  const wrap = el("div", { className: "switch-row" });
-  wrap.append(document.createTextNode(label));
+function renderSwitchRow(
+  row: SwitchRow,
+  activeClip: Clip | undefined,
+  switchesOut: Map<HTMLButtonElement, SwitchRef>,
+): HTMLElement {
+  const wrap = el("div", {
+    className: `switch-row${row.disabled ? " disabled" : ""}`,
+  });
+  wrap.append(document.createTextNode(row.label));
+
+  const on = row.transformKey
+    ? Boolean(readTransformValue(activeClip, row.transformKey, row.defaultOn))
+    : row.defaultOn;
 
   const sw = el("button", {
     className: `switch${on ? " on" : ""}`,
     attrs: { type: "button", "aria-pressed": String(on) },
   });
-  wrap.append(sw);
+  if (row.disabled) sw.disabled = true;
 
+  wrap.append(sw);
+  switchesOut.set(sw, { button: sw, def: row });
   return wrap;
 }
 
 function renderCurveRow(): HTMLElement {
   const box = el("div", { className: "curve-box" });
-
-  /* Static SVG dari original — innerHTML karena content SVG
-     bukan sesuatu yang mudah di-generate via el(). Content
-     hardcoded, tidak ada user data. */
   box.innerHTML = `
     <svg viewBox="0 0 100 74" preserveAspectRatio="none">
       <line x1="0" y1="37" x2="100" y2="37" stroke="#1d2432" stroke-width="1"/>
@@ -190,6 +283,5 @@ function renderCurveRow(): HTMLElement {
       <circle cx="62" cy="24" r="3" fill="#fff" stroke="#7c5cff" stroke-width="2"/>
     </svg>
   `;
-
   return box;
 }

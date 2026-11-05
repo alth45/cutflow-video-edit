@@ -107,3 +107,6 @@
 
 /* Toast — floating notification */
 @import "./components/toast.css";
+
+/* Text editor modal — double-click text clip */
+@import "./components/text-editor.css";

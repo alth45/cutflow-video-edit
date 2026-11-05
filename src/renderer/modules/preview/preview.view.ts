@@ -16,6 +16,7 @@ import type { AppState } from "@shared/types/state";
 export interface PreviewView {
   readonly root: HTMLElement;
   readonly seqMeta: HTMLElement;
+  readonly compositeLayer: HTMLElement;
   readonly playOverlay: HTMLElement;
   readonly btnPlay: HTMLButtonElement;
   readonly playIconSvg: SVGElement;
@@ -73,6 +74,8 @@ export function renderPreview(state: AppState): PreviewView {
     el("div", { className: "hills" }),
   );
 
+  const compositeLayer = el("div", { className: "monitor-composite" });
+
   const safeArea = el("div", { className: "safe-area" });
 
   const playOverlay = el("div", {
@@ -84,7 +87,7 @@ export function renderPreview(state: AppState): PreviewView {
   btnBigPlay.append(createIcon("play"));
   playOverlay.append(btnBigPlay);
 
-  monitor.append(inner, safeArea, playOverlay);
+  monitor.append(inner, compositeLayer, safeArea, playOverlay);
   stage.append(monitor);
 
   /* ---------- Transport ---------- */
@@ -151,6 +154,7 @@ export function renderPreview(state: AppState): PreviewView {
   return {
     root,
     seqMeta,
+    compositeLayer,
     playOverlay,
     btnPlay,
     playIconSvg,

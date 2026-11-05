@@ -197,30 +197,59 @@ function renderThumb(asset: MediaAsset): HTMLElement {
     /* Demo assets — file tidak ada, gradient only */
     img.classList.add(getGradientClass(hashIndex(asset.name)));
   } else if (asset.kind === "image") {
+    /* Blur fill — di-set setelah img load (reuse cache URL, no extra fetch). */
+    const blur = el("div", { className: "thumb-blur" });
+
     const imgEl = el("img", {
-      attrs: { alt: "", loading: "lazy", decoding: "async" },
+      attrs: { alt: "", decoding: "async" },
     });
     imgEl.src = mediaUrl(asset.path);
+
+    imgEl.addEventListener("load", () => {
+      /* Blur pakai URL yang sama → Chromium pakai cached image. */
+      blur.style.backgroundImage = `url("${imgEl.src}")`;
+    });
+
     imgEl.addEventListener("error", () => {
       imgEl.remove();
+      blur.remove();
       img.classList.add(getGradientClass(hashIndex(asset.name)));
     });
-    img.append(imgEl);
+
+    img.append(blur, imgEl);
   } else if (asset.kind === "video") {
-    /* #t=0.1 forces browser to seek to 0.1s and display that
-       frame as the "poster" once metadata loads. */
+    /* Video — blur dari captured frame setelah video loaded. */
     const videoEl = el("video", {
-      attrs: {
-        preload: "metadata",
-        playsinline: "",
-      },
+      attrs: { preload: "metadata", playsinline: "" },
     });
     videoEl.muted = true;
     videoEl.src = mediaUrl(asset.path) + "#t=0.1";
+
+    videoEl.addEventListener("loadeddata", () => {
+      /* Capture frame ke canvas kecil, encode JPEG, set sebagai blur bg.
+         Ukuran 32×32 cukup karena blur akan menghilangkan detail. */
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 32;
+        canvas.height = 32;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(videoEl, 0, 0, 32, 32);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.6);
+          const blur = el("div", { className: "thumb-blur" });
+          blur.style.backgroundImage = `url(${dataUrl})`;
+          img.prepend(blur);
+        }
+      } catch {
+        /* drawImage bisa throw jika video tidak decode — abaikan. */
+      }
+    });
+
     videoEl.addEventListener("error", () => {
       videoEl.remove();
       img.classList.add(getGradientClass(hashIndex(asset.name)));
     });
+
     img.append(videoEl);
   } else {
     /* Audio — no visual content, gradient + music icon */

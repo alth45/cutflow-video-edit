@@ -1,26 +1,14 @@
 import { on, delegate } from "@core/Dom";
 import * as actions from "@state/actions";
+import { appStore } from "@state/appStore";
+import { getClipById } from "@state/selectors";
 import { sliderPercent } from "./inspector.logic";
 import type { InspectorView } from "./inspector.view";
 import type { InspectorPanelTab } from "@shared/types/state";
-
-/* ============================================================
-   INSPECTOR CONTROLLER
-   ------------------------------------------------------------
-   Semua interaksi via event delegation di root — tidak perlu
-   attach per-control, karena row dinamis (kelak bisa berubah
-   dari clip properties).
-
-   F10 scope:
-   - Tab switching → actions.setInspectorTab
-   - Group toggle → actions.toggleInspectorGroup
-   - Slider input → update --val + .val text (LOCAL, tidak store)
-   - Switch toggle → toggle .on class (LOCAL, tidak store)
-
-   F11+: saat clip di-select, tambah handler yang menulis ke
-   clip properties via action baru.
-   ============================================================ */
-
+import {
+  DEFAULT_CLIP_TRANSFORM,
+  DEFAULT_CLIP_COLOR,
+} from "@shared/types/timeline";
 export function attachInspectorController(view: InspectorView): () => void {
   const cleanups: Array<() => void> = [];
 
@@ -45,12 +33,13 @@ export function attachInspectorController(view: InspectorView): () => void {
     }),
   );
 
-  /* Slider input — local update only */
+  /* Slider input — local update + bind to action */
   cleanups.push(
     on(view.root, "input", (ev) => {
       const target = ev.target;
       if (!(target instanceof HTMLInputElement) || target.type !== "range")
         return;
+      if (target.disabled) return;
 
       const ref = view.sliders.get(target);
       if (!ref) return;
@@ -60,16 +49,52 @@ export function attachInspectorController(view: InspectorView): () => void {
       const max = Number(target.max);
       target.style.setProperty("--val", `${sliderPercent(value, min, max)}%`);
       ref.valueEl.textContent = ref.def.format(value);
+
+      /* Bind ke clip transform atau color. */
+      const state = appStore.getState();
+      const activeId = state.selection.selectedClipIds[0];
+      if (!activeId) return;
+      const clip = getClipById(state, activeId);
+      if (!clip) return;
+
+      if (ref.def.transformKey) {
+        actions.setClipTransformProperty(activeId, ref.def.transformKey, value);
+      } else if (ref.def.colorKey) {
+        actions.setClipColorProperty(activeId, ref.def.colorKey, value);
+      }
     }),
   );
 
-  /* Switch toggle — local update only */
+  /* Switch click — local toggle + bind to action */
   cleanups.push(
     delegate(view.root, "click", ".switch", (ev, sw) => {
       ev.stopPropagation();
-      const el = sw as HTMLButtonElement;
-      const isOn = el.classList.toggle("on");
-      el.setAttribute("aria-pressed", String(isOn));
+      const button = sw as HTMLButtonElement;
+      if (button.disabled) return;
+
+      const ref = view.switches.get(button);
+      if (!ref) return;
+
+      if (ref.def.transformKey) {
+        const state = appStore.getState();
+        const activeId = state.selection.selectedClipIds[0];
+        if (!activeId) return;
+        const clip = getClipById(state, activeId);
+        if (!clip) return;
+        const current = (clip.transform ?? DEFAULT_CLIP_TRANSFORM)[
+          ref.def.transformKey
+        ];
+        actions.setClipTransformProperty(
+          activeId,
+          ref.def.transformKey,
+          !current,
+        );
+        return;
+      }
+
+      /* Unbound (placeholder): local toggle only */
+      const isOn = button.classList.toggle("on");
+      button.setAttribute("aria-pressed", String(isOn));
     }),
   );
 

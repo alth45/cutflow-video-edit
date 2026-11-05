@@ -390,5 +390,6 @@ export function updateActiveTool(view: TimelineView, state: AppState): void {
       btn.classList.toggle("active", btn.dataset["tool"] === tool);
     });
   view.tlScroll.classList.toggle("razor-mode", tool === "razor");
-  view.tlScroll.classList.toggle("hand-mode", tool === "hand"); // ← TAMBAH
+  view.tlScroll.classList.toggle("hand-mode", tool === "hand");
+  view.tlScroll.classList.toggle("text-mode", tool === "text");
 }

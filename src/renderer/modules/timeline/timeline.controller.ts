@@ -35,6 +35,9 @@ import { getClipsInTrack } from "@state/selectors";
 import { intersects, rectFromPoints, isTinyDrag } from "./clip-marquee.logic";
 import { getTransitionById } from "@state/selectors";
 
+import { openTextEditor } from "./text-editor.module";
+import { getClipById } from "@state/selectors";
+
 /* Threshold gerakan minimum (px) sebelum drag dianggap mulai —
    membedakan click (select only) dari drag (move). */
 const DRAG_THRESHOLD_PX = 3;
@@ -87,6 +90,7 @@ export function attachTimelineController(view: TimelineView): () => void {
     // Abaikan klik pada clip (ditangani terpisah untuk select).
     if ((ev.target as HTMLElement).closest(".clip")) return;
     if (appStore.getState().ui.timeline.activeTool === "hand") return;
+    if (appStore.getState().ui.timeline.activeTool === "text") return;
 
     scrubbing = true;
     doScrub(ev);
@@ -119,6 +123,8 @@ export function attachTimelineController(view: TimelineView): () => void {
     delegate(view.tracksContainer, "click", ".track", (ev, trackEl) => {
       if ((ev.target as HTMLElement).closest(".clip")) return;
       if (appStore.getState().ui.timeline.activeTool === "hand") return;
+      if (appStore.getState().ui.timeline.activeTool === "text") return;
+
       actions.clearSelection();
       const trackId = (trackEl as HTMLElement).dataset["trackId"];
       if (trackId) actions.setActiveTrack(trackId);
@@ -160,12 +166,23 @@ export function attachTimelineController(view: TimelineView): () => void {
 
   cleanups.push(attachHandPan(view));
 
+  cleanups.push(attachTextTool(view));
+
+  /* ---- Text clip double-click → edit content ---- */
+  cleanups.push(
+    delegate(view.tracksContainer, "dblclick", ".clip.text", (ev, clipEl) => {
+      ev.stopPropagation();
+      void handleTextClipDblClick(view, clipEl as HTMLElement);
+    }),
+  );
+
   /* ---- Transition box click ---- */
   cleanups.push(
     delegate(view.tracksContainer, "click", ".transition-box", (ev, boxEl) => {
       ev.stopPropagation();
       const el = boxEl as HTMLElement;
       if (appStore.getState().ui.timeline.activeTool === "hand") return;
+      if (appStore.getState().ui.timeline.activeTool === "text") return;
       const transitionId = el.dataset["transitionId"];
       const beforeClipId = el.dataset["beforeClipId"];
       const afterClipId = el.dataset["afterClipId"];
@@ -177,7 +194,15 @@ export function attachTimelineController(view: TimelineView): () => void {
         (t) => beforeClipId && t.clips.some((c) => c.id === beforeClipId),
       );
       if (!track || track.locked) return;
-
+      /* Seek playhead ke junction (transition center). */
+      const clipBefore = track.clips.find((c) => c.id === beforeClipId);
+      if (clipBefore) {
+        const junctionSec = clipBefore.startSec + clipBefore.durationSec;
+        const playhead = state.playback.currentTimeSec;
+        if (Math.abs(playhead - junctionSec) > 0.05) {
+          actions.setCurrentTime(junctionSec);
+        }
+      }
       /* Existing transition → select. */
       if (transitionId) {
         actions.selectTransition(transitionId);
@@ -238,7 +263,7 @@ function attachClipDrag(
     if (!(target instanceof Element)) return;
     const state = appStore.getState();
     if (state.ui.timeline.activeTool === "hand") return;
-
+    if (state.ui.timeline.activeTool === "text") return;
     if (target.closest(".clip-trim")) return;
     if (target.closest(".transition-box")) return;
 
@@ -437,6 +462,21 @@ function attachClipDrag(
     if (!moved) {
       if (wasMultiSelection) {
         actions.selectClip(primaryClipId);
+      }
+
+      /* Seek preview ke clip kalau playhead tidak di dalam clip. */
+      const latest = appStore.getState();
+      const clip = latest.project.sequence.tracks
+        .flatMap((t) => t.clips)
+        .find((c) => c.id === primaryClipId);
+      if (clip) {
+        const playhead = latest.playback.currentTimeSec;
+        const inside =
+          playhead >= clip.startSec &&
+          playhead < clip.startSec + clip.durationSec;
+        if (!inside) {
+          actions.setCurrentTime(clip.startSec + 0.05);
+        }
       }
       return;
     }
@@ -668,7 +708,7 @@ function attachClipTrim(view: TimelineView): () => void {
     if (!(target instanceof Element)) return;
 
     if (appStore.getState().ui.timeline.activeTool === "hand") return;
-
+    if (appStore.getState().ui.timeline.activeTool === "text") return;
     const handle = target.closest<HTMLElement>(".clip-trim-right");
     if (!handle) return;
 
@@ -783,7 +823,7 @@ function attachMarquee(view: TimelineView): () => void {
     /* Razor mode: tidak ada marquee. */
     if (state.ui.timeline.activeTool === "razor") return;
     if (state.ui.timeline.activeTool === "hand") return;
-
+    if (state.ui.timeline.activeTool === "text") return;
     const target = ev.target;
     if (!(target instanceof Element)) return;
 
@@ -957,4 +997,95 @@ function attachHandPan(view: TimelineView): () => void {
     document.removeEventListener("mousemove", onMouseMove);
     document.removeEventListener("mouseup", onMouseUp);
   };
+}
+
+/* ============================================================
+   TEXT TOOL (F14m)
+   ------------------------------------------------------------
+   Klik di empty area video track → buat text clip di posisi
+   klik. Track audio = no-op. Tool tetap aktif setelah create
+   (multi-place, seperti razor).
+   ============================================================ */
+
+function attachTextTool(view: TimelineView): () => void {
+  const onMouseDown = (ev: MouseEvent): void => {
+    if (ev.button !== 0) return;
+
+    const state = appStore.getState();
+    if (state.ui.timeline.activeTool !== "text") return;
+
+    const target = ev.target;
+    if (!(target instanceof Element)) return;
+
+    /* Skip di existing elements — jangan create text on-top of clip
+       atau transition box. */
+    if (target.closest(".clip")) return;
+    if (target.closest(".clip-trim")) return;
+    if (target.closest(".transition-box")) return;
+
+    /* Harus di dalam track area. */
+    const trackEl = target.closest<HTMLElement>(".track");
+    if (!trackEl) return;
+
+    const trackId = trackEl.dataset["trackId"];
+    if (!trackId) return;
+
+    const track = state.project.sequence.tracks.find((t) => t.id === trackId);
+    if (!track || track.locked) return;
+    if (track.kind !== "video") return;
+
+    /* Konversi X → waktu sequence. */
+    const tlRect = view.tlContent.getBoundingClientRect();
+    const durationSec = state.project.sequence.durationSec;
+    if (tlRect.width <= 0 || durationSec <= 0) return;
+
+    const px = ev.clientX - tlRect.left;
+    const progress = Math.max(0, Math.min(1, px / tlRect.width));
+    const startSec = progress * durationSec;
+
+    actions.addTextClip(trackId, startSec);
+    ev.preventDefault();
+  };
+
+  return on(view.tracksContainer, "mousedown", onMouseDown as EventListener);
+}
+
+/* ============================================================
+   TEXT CLIP EDIT (F14n)
+   ------------------------------------------------------------
+   Double-click pada text clip → buka modal → save content.
+   Hanya aktif di pointer tool (razor/hand/text = no-op).
+   ============================================================ */
+
+async function handleTextClipDblClick(
+  view: TimelineView,
+  clipEl: HTMLElement,
+): Promise<void> {
+  const state = appStore.getState();
+  if (state.ui.timeline.activeTool !== "pointer") return;
+
+  const clipId = clipEl.dataset["clipId"];
+  if (!clipId) return;
+
+  const clip = getClipById(state, clipId);
+  if (!clip || clip.kind !== "text") return;
+
+  const track = state.project.sequence.tracks.find((t) =>
+    t.clips.some((c) => c.id === clipId),
+  );
+  if (!track || track.locked) return;
+
+  const result = await openTextEditor({
+    initialValue: clip.source.content,
+    title: "Edit text clip",
+    placeholder: "Enter text…",
+  });
+
+  if (result === null) return; // cancelled
+
+  actions.updateTextClipContent(clipId, result);
+
+  /* Focus kembali ke timeline setelah modal close supaya
+     keyboard shortcuts berfungsi (Escape, Space, dll.). */
+  view.tlScroll.focus();
 }

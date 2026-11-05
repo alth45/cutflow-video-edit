@@ -137,6 +137,8 @@
   border-radius: var(--radius);
   overflow: hidden;
   border: 1px solid var(--line);
+  background: var(--panel-3);
+  isolation: isolate; /* ← TAMBAH: stacking context untuk z-index lokal */
   transition:
     border-color var(--duration),
     box-shadow var(--duration),
@@ -145,12 +147,14 @@
 
 /* Overlay gradient dari bawah untuk membuat `.dur` badge
    selalu terbaca — override warna apapun di belakangnya. */
+/* Gradient overlay — readability badge durasi di atas media. */
 .thumb-img::after {
   content: "";
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, transparent 45%, rgba(0, 0, 0, 0.6));
   pointer-events: none;
+  z-index: 2;
 }
 
 .thumb:hover .thumb-img {
@@ -167,7 +171,7 @@
   position: absolute;
   right: var(--space-2);
   bottom: var(--space-2);
-  z-index: 2;
+  z-index: 3;
   font-size: var(--text-size-100);
   padding: 1px var(--space-2);
   border-radius: var(--radius-xs);
@@ -305,17 +309,33 @@
    object-fit cover. `background: #000` = fallback saat loading
    (hindari putih flash).
    ============================================================ */
-.thumb-img img,
-.thumb-img video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  background: #000;
-  /* Video: jangan ada subtitle track kontrol */
+/* Blur fill — background dari media yang sama, di-blur. Mengisi
+   sisa space ketika media aspect ≠ container aspect (portrait
+   di container landscape, dsb.). */
+.thumb-img .thumb-blur {
+  position: absolute;
+  inset: -12px; /* expand agar blur edge tidak terlihat */
+  background-size: cover;
+  background-position: center;
+  filter: blur(18px) brightness(0.5) saturate(1.15);
   pointer-events: none;
+  z-index: 0;
 }
 
+/* Main media — contain (tidak crop, tidak stretch). Fill
+   container center. */
+.thumb-img img,
+.thumb-img video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* ← ganti dari cover */
+  display: block;
+  background: transparent;
+  pointer-events: none;
+  z-index: 1;
+}
 /* Audio: music icon di tengah (di atas gradient). */
 .thumb-img .thumb-audio-icon {
   position: absolute;

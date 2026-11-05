@@ -11,7 +11,7 @@
    ============================================================ */
 
 import type { InspectorPanelTab } from "@shared/types/state";
-
+import type { ClipTransform, ClipColor } from "@shared/types/timeline";
 /* ---------- Formatters ---------- */
 
 export type ValueFormatter = (value: number) => string;
@@ -40,14 +40,19 @@ export interface SliderRow {
   readonly label: string;
   readonly min: number;
   readonly max: number;
-  readonly value: number;
+  readonly defaultValue: number;
   readonly format: ValueFormatter;
+  readonly transformKey?: keyof ClipTransform;
+  readonly colorKey?: keyof ClipColor;
+  readonly disabled?: boolean;
 }
 
 export interface SwitchRow {
   readonly kind: "switch";
   readonly label: string;
-  readonly on: boolean;
+  readonly defaultOn: boolean;
+  readonly transformKey?: keyof ClipTransform;
+  readonly disabled?: boolean;
 }
 
 export interface CurveRow {
@@ -85,40 +90,45 @@ export const INSPECTOR_TABS: readonly TabDef[] = [
             label: "Position X",
             min: -100,
             max: 100,
-            value: 0,
+            defaultValue: 0,
             format: fmt.plain,
+            transformKey: "positionX",
           },
           {
             kind: "slider",
             label: "Position Y",
             min: -100,
             max: 100,
-            value: 0,
+            defaultValue: 0,
             format: fmt.plain,
+            transformKey: "positionY",
           },
           {
             kind: "slider",
             label: "Scale",
             min: 10,
             max: 200,
-            value: 100,
+            defaultValue: 100,
             format: fmt.percent,
+            transformKey: "scale",
           },
           {
             kind: "slider",
             label: "Rotation",
             min: -180,
             max: 180,
-            value: 0,
+            defaultValue: 0,
             format: fmt.degrees,
+            transformKey: "rotation",
           },
           {
             kind: "slider",
             label: "Opacity",
             min: 0,
             max: 100,
-            value: 100,
+            defaultValue: 100,
             format: fmt.percent,
+            transformKey: "opacity",
           },
         ],
       },
@@ -131,18 +141,25 @@ export const INSPECTOR_TABS: readonly TabDef[] = [
             label: "Left",
             min: 0,
             max: 50,
-            value: 0,
+            defaultValue: 0,
             format: fmt.percent,
+            transformKey: "cropLeft",
           },
           {
             kind: "slider",
             label: "Right",
             min: 0,
             max: 50,
-            value: 0,
+            defaultValue: 0,
             format: fmt.percent,
+            transformKey: "cropRight",
           },
-          { kind: "switch", label: "Feather Edge", on: false },
+          {
+            kind: "switch",
+            label: "Feather Edge",
+            defaultOn: false,
+            transformKey: "featherEdge",
+          },
         ],
       },
       {
@@ -154,11 +171,22 @@ export const INSPECTOR_TABS: readonly TabDef[] = [
             label: "Rate",
             min: 25,
             max: 400,
-            value: 100,
+            defaultValue: 100,
             format: fmt.percent,
+            disabled: true,
           },
-          { kind: "switch", label: "Reverse", on: false },
-          { kind: "switch", label: "Optical Flow", on: true },
+          {
+            kind: "switch",
+            label: "Reverse",
+            defaultOn: false,
+            disabled: true,
+          },
+          {
+            kind: "switch",
+            label: "Optical Flow",
+            defaultOn: true,
+            disabled: true,
+          },
         ],
       },
     ],
@@ -176,16 +204,18 @@ export const INSPECTOR_TABS: readonly TabDef[] = [
             label: "Level",
             min: -60,
             max: 12,
-            value: 0,
+            defaultValue: 0,
             format: fmt.db,
+            disabled: true,
           },
           {
             kind: "slider",
             label: "Pan",
             min: -100,
             max: 100,
-            value: 0,
+            defaultValue: 0,
             format: fmt.pan,
+            disabled: true,
           },
         ],
       },
@@ -198,18 +228,25 @@ export const INSPECTOR_TABS: readonly TabDef[] = [
             label: "In",
             min: 0,
             max: 300,
-            value: 40,
+            defaultValue: 40,
             format: fmt.seconds,
+            disabled: true,
           },
           {
             kind: "slider",
             label: "Out",
             min: 0,
             max: 300,
-            value: 60,
+            defaultValue: 60,
             format: fmt.seconds,
+            disabled: true,
           },
-          { kind: "switch", label: "Normalize", on: true },
+          {
+            kind: "switch",
+            label: "Normalize",
+            defaultOn: true,
+            disabled: true,
+          },
         ],
       },
     ],
@@ -227,32 +264,36 @@ export const INSPECTOR_TABS: readonly TabDef[] = [
             label: "Exposure",
             min: -100,
             max: 100,
-            value: 12,
+            defaultValue: 12,
             format: fmt.exposure,
+            colorKey: "exposure",
           },
           {
             kind: "slider",
             label: "Contrast",
             min: -100,
             max: 100,
-            value: 8,
+            defaultValue: 8,
             format: fmt.signed,
+            colorKey: "contrast",
           },
           {
             kind: "slider",
             label: "Saturation",
             min: 0,
             max: 200,
-            value: 112,
+            defaultValue: 112,
             format: fmt.plain,
+            colorKey: "saturation",
           },
           {
             kind: "slider",
             label: "Temp",
             min: -100,
             max: 100,
-            value: -6,
+            defaultValue: -6,
             format: fmt.signed,
+            colorKey: "temp",
           },
         ],
       },

@@ -6,13 +6,20 @@ import {
   getSelectedClips,
 } from "./selectors";
 import type { Project, MediaAsset } from "@shared/types/project";
+import {
+  DEFAULT_CLIP_TRANSFORM,
+  DEFAULT_CLIP_COLOR,
+} from "@shared/types/timeline";
 import type {
   Clip,
   TrackKind,
   ClipKind,
   Track,
+  TextClip,
   Transition,
   TransitionKind,
+  ClipTransform,
+  ClipColor,
 } from "@shared/types/timeline";
 import type {
   AppState,
@@ -1072,6 +1079,103 @@ export function setClipDuration(clipId: string, newDurationSec: number): void {
 }
 
 /* ============================================================
+   CLIP TRANSFORM
+   ------------------------------------------------------------
+   Update properti transform (position, scale, rotation, opacity,
+   crop) pada clip. Setiap perubahan = 1 history entry.
+   ============================================================ */
+
+export function setClipTransformProperty<K extends keyof ClipTransform>(
+  clipId: string,
+  key: K,
+  value: ClipTransform[K],
+): void {
+  appStore.setState((state) => {
+    for (const track of state.project.sequence.tracks) {
+      if (track.locked) continue;
+
+      const idx = track.clips.findIndex((c) => c.id === clipId);
+      if (idx < 0) continue;
+
+      const clip = track.clips[idx];
+      if (!clip) return state;
+
+      const currentTransform = clip.transform ?? DEFAULT_CLIP_TRANSFORM;
+      if (currentTransform[key] === value) return state;
+
+      const nextClip: Clip = {
+        ...clip,
+        transform: { ...currentTransform, [key]: value },
+      };
+
+      const nextClips = [...track.clips];
+      nextClips[idx] = nextClip;
+
+      const nextProject = {
+        ...state.project,
+        sequence: {
+          ...state.project.sequence,
+          tracks: state.project.sequence.tracks.map((t) =>
+            t.id === track.id ? { ...t, clips: nextClips } : t,
+          ),
+        },
+      };
+      return withProject(state, nextProject);
+    }
+    return state;
+  });
+}
+
+/* ============================================================
+   CLIP COLOR
+   ------------------------------------------------------------
+   Update color correction (exposure, contrast, saturation, temp).
+   Setiap perubahan = 1 history entry (granular — sama seperti
+   transform slider, bisa di-fix nanti dengan drag grouping).
+   ============================================================ */
+
+export function setClipColorProperty<K extends keyof ClipColor>(
+  clipId: string,
+  key: K,
+  value: ClipColor[K],
+): void {
+  appStore.setState((state) => {
+    for (const track of state.project.sequence.tracks) {
+      if (track.locked) continue;
+
+      const idx = track.clips.findIndex((c) => c.id === clipId);
+      if (idx < 0) continue;
+
+      const clip = track.clips[idx];
+      if (!clip) return state;
+
+      const current = clip.color ?? DEFAULT_CLIP_COLOR;
+      if (current[key] === value) return state;
+
+      const nextClip: Clip = {
+        ...clip,
+        color: { ...current, [key]: value },
+      };
+
+      const nextClips = [...track.clips];
+      nextClips[idx] = nextClip;
+
+      const nextProject = {
+        ...state.project,
+        sequence: {
+          ...state.project.sequence,
+          tracks: state.project.sequence.tracks.map((t) =>
+            t.id === track.id ? { ...t, clips: nextClips } : t,
+          ),
+        },
+      };
+      return withProject(state, nextProject);
+    }
+    return state;
+  });
+}
+
+/* ============================================================
    SPLIT CLIP
    ------------------------------------------------------------
    Belah clip di `splitTimeSec` menjadi dua clip baru:
@@ -1238,4 +1342,108 @@ export function toggleTrackMuted(trackId: string): void {
   appStore.setState((s) =>
     updateTrackById(s, trackId, (t) => ({ ...t, muted: !t.muted })),
   );
+}
+
+/* ============================================================
+   TEXT CLIP CREATION
+   ------------------------------------------------------------
+   Buat text clip baru (default name/content "Text", color purple,
+   durasi 5s). Track harus video. Setelah create, clip auto-
+   selected. Auto-extend sequence kalau perlu.
+   ============================================================ */
+
+const DEFAULT_TEXT_CLIP_DURATION_SEC = 5;
+
+export function addTextClip(trackId: string, startSec: number): void {
+  appStore.setState((state) => {
+    const track = getTrackById(state, trackId);
+    if (!track || track.locked) return state;
+    if (track.kind !== "video") return state;
+
+    const MAX = TIMELINE.MAX_SEQUENCE_DURATION_SEC;
+    const duration = DEFAULT_TEXT_CLIP_DURATION_SEC;
+    const maxStart = Math.max(0, MAX - duration);
+    const clampedStart = Math.max(0, Math.min(maxStart, startSec));
+
+    const textClip: TextClip = {
+      id: makeId("clip"),
+      kind: "text",
+      name: "Text",
+      startSec: Math.round(clampedStart * 10) / 10,
+      durationSec: duration,
+      colorToken: "purple",
+      transform: DEFAULT_CLIP_TRANSFORM,
+      color: DEFAULT_CLIP_COLOR,
+      source: { kind: "text", content: "Text" },
+    };
+
+    const nextTrack = { ...track, clips: [...track.clips, textClip] };
+    const nextProject = {
+      ...state.project,
+      sequence: {
+        ...state.project.sequence,
+        tracks: state.project.sequence.tracks.map((t) =>
+          t.id === trackId ? nextTrack : t,
+        ),
+      },
+    };
+
+    return {
+      ...withProject(state, withAutoExtend(nextProject)),
+      selection: {
+        ...state.selection,
+        selectedClipIds: [textClip.id],
+        selectedTransitionId: null,
+      },
+    };
+  });
+}
+
+/**
+ * Update konten text clip. `name` di-sync ke content (single-line,
+ * truncated 80 char untuk display label) — `source.content` tetap
+ * preserve newlines/multi-line.
+ *
+ * Reject empty content (caller harus handle — user bisa cancel
+ * atau hapus clip via Delete kalau mau kosong).
+ */
+export function updateTextClipContent(clipId: string, content: string): void {
+  const trimmed = content.trim();
+  if (!trimmed) return;
+
+  appStore.setState((state) => {
+    for (const track of state.project.sequence.tracks) {
+      if (track.locked) continue;
+
+      const idx = track.clips.findIndex((c) => c.id === clipId);
+      if (idx < 0) continue;
+
+      const clip = track.clips[idx];
+      if (!clip || clip.kind !== "text") return state;
+      if (clip.source.content === trimmed) return state;
+
+      const displayName = trimmed.replace(/\s+/g, " ").slice(0, 80) || "Text";
+
+      const nextClip: TextClip = {
+        ...clip,
+        name: displayName,
+        source: { kind: "text", content: trimmed },
+      };
+
+      const nextClips = [...track.clips];
+      nextClips[idx] = nextClip;
+
+      const nextProject = {
+        ...state.project,
+        sequence: {
+          ...state.project.sequence,
+          tracks: state.project.sequence.tracks.map((t) =>
+            t.id === track.id ? { ...t, clips: nextClips } : t,
+          ),
+        },
+      };
+      return withProject(state, nextProject);
+    }
+    return state;
+  });
 }

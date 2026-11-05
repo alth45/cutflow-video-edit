@@ -2,8 +2,10 @@ import { appStore } from "./appStore";
 import { makeId } from "@utils/id";
 import type { MediaAsset, MediaAssetKind } from "@shared/types/project";
 import type { Clip, ClipColorToken } from "@shared/types/timeline";
-
-/* ============================================================
+import {
+  DEFAULT_CLIP_TRANSFORM,
+  DEFAULT_CLIP_COLOR,
+} from "@shared/types/timeline"; /* ============================================================
    DEMO SEEDING (DEV ONLY)
    ------------------------------------------------------------
    Mengisi state dengan data demo saat dev mode. Idempotent:
@@ -202,6 +204,8 @@ function buildClip(
     startSec: spec.startSec,
     durationSec: spec.durationSec,
     colorToken: spec.colorToken,
+    transform: DEFAULT_CLIP_TRANSFORM,
+    color: DEFAULT_CLIP_COLOR, 
   };
 
   switch (spec.kind) {
