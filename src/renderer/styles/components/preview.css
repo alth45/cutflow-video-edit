@@ -149,96 +149,71 @@
    Layer di paling bawah = linear gradient (base scene), di
    atasnya glow radial yang menambah "atmosphere".
    ============================================================ */
+/* ============================================================
+   EMPTY STATE (F14y)
+   ------------------------------------------------------------
+   Tampil saat sequence tidak punya clip sama sekali. Media aktif
+   akan menutupi (via `.monitor.has-content` — di-hide saat ada
+   clips).
+
+   Struktur:
+     .monitor-inner (bg #000, grid center)
+       └── .monitor-empty (flex column)
+            ├── .monitor-empty-logo (gradient + play icon)
+            ├── .monitor-empty-name ("CutFlow")
+            └── .monitor-empty-hint ("No media in timeline")
+   ============================================================ */
 .monitor-inner {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(
-      closest-side at 76% 26%,
-      rgba(255, 228, 168, 0.75),
-      transparent 100%
-    ),
-    radial-gradient(
-      closest-side at 50% 108%,
-      rgba(255, 132, 64, 0.55),
-      transparent 100%
-    ),
-    linear-gradient(180deg, #16233f 0%, #3a3a68 42%, #9c5570 72%, #f2a76b 100%);
+  background: #000;
+  display: grid;
+  place-items: center;
 }
 
-/* ============================================================
-   SUN
-   ------------------------------------------------------------
-   Disk matahari di posisi 72%/22%. Ukuran relative ke monitor
-   (9% width). Filter blur 1px untuk softening edge — mengurangi
-   "hard pixel" look pada layar high-DPI.
-   ============================================================ */
-.monitor-inner .sun {
-  position: absolute;
-  left: 72%;
-  top: 22%;
-  width: 9%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    #fff3cf,
-    #ffcf7a 55%,
-    rgba(255, 190, 90, 0) 72%
-  );
-  filter: blur(1px);
+.monitor-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
+  text-align: center;
+  padding: var(--space-9);
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.9;
 }
 
-/* ============================================================
-   HILLS — MOUNTAIN SILHOUETTE
-   ------------------------------------------------------------
-   `clip-path: polygon(...)` membuat bentuk "pegunungan" dari
-   rect yang kita beri gradient. Polygon didefinisikan dalam
-   persen (0-100), membentuk siluet acak.
-
-   `inset: auto 0 0 0` = shorthand untuk:
-     top: auto; right: 0; bottom: 0; left: 0
-   Artinya stick ke bawah, span full width.
-   ============================================================ */
-.monitor-inner .hills {
-  position: absolute;
-  inset: auto 0 0 0;
-  height: 34%;
-  background: linear-gradient(180deg, #2a2340, #14101f);
-  clip-path: polygon(
-    0 62%,
-    12% 44%,
-    24% 58%,
-    37% 30%,
-    52% 55%,
-    66% 38%,
-    80% 60%,
-    92% 46%,
-    100% 58%,
-    100% 100%,
-    0 100%
-  );
-  opacity: 0.92;
+.monitor-empty-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow:
+    0 8px 24px rgba(124, 92, 255, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
-/* Varian hills kedua — lebih jauh, lebih terang (aerial perspective),
-   lebih kecil tinggi. Diletakkan di belakang (.h2 adalah DOM
-   sibling yang muncul duluan, sehingga paint order di bawah). */
-.monitor-inner .hills.h2 {
-  height: 22%;
-  opacity: 0.65;
-  background: linear-gradient(180deg, #3d2f52, #1b1529);
-  clip-path: polygon(
-    0 70%,
-    18% 40%,
-    34% 66%,
-    50% 44%,
-    68% 68%,
-    84% 46%,
-    100% 64%,
-    100% 100%,
-    0 100%
-  );
+.monitor-empty-logo svg {
+  width: 24px;
+  height: 24px;
+  color: #fff;
+  stroke-width: 2.5;
+}
+
+.monitor-empty-name {
+  font-size: var(--text-size-180);
+  font-weight: var(--fw-bold);
+  color: var(--text);
+  letter-spacing: 0.3px;
+  line-height: 1;
+}
+
+.monitor-empty-hint {
+  font-size: var(--text-size-120);
+  color: var(--muted-2);
+  letter-spacing: 0.3px;
 }
 
 /* ============================================================
@@ -437,10 +412,27 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: none;
+  transform-origin: center center;
 }
 
-.preview-clip video,
-.preview-clip img {
+/* Content wrapper — fit-content untuk text, full-size untuk media. */
+.preview-clip-content {
+  position: relative;
+  pointer-events: none;
+}
+
+.preview-clip.text .preview-clip-content {
+  /* Default: auto-sized ke content (text). */
+}
+
+.preview-clip.media .preview-clip-content {
+  position: absolute;
+  inset: 0;
+}
+
+.preview-clip-content video,
+.preview-clip-content img {
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -506,4 +498,89 @@
   mix-blend-mode: soft-light;
   display: none;
   /* di atas img/video (rendered setelah video/img di DOM) */
+}
+
+/* ============================================================
+   SELECTION BOX (F14t)
+   ------------------------------------------------------------
+   Saat clip di-select, overlay content dapat selection outline
+   + pointer-events (drag target).
+   ============================================================ */
+
+.preview-clip.selected .preview-clip-content {
+  pointer-events: auto;
+  cursor: move;
+}
+
+/* Play overlay: pointer-events: none on container — button tetap
+   klikabel, sisa area lewat ke composite di bawah. */
+.play-overlay {
+  pointer-events: none;
+}
+
+.play-overlay button {
+  pointer-events: auto;
+}
+
+/* Hide behavior tetap (saat playing) — override pointer-events
+   kembali ke none di button juga. */
+.play-overlay.hide button {
+  pointer-events: none;
+}
+
+/* ============================================================
+   SELECTION OVERLAY (F14u)
+   ------------------------------------------------------------
+   Layer terpisah di `.monitor`. Bounds di-set inline dari JS
+   (getBoundingClientRect). Handles TIDAK ter-scale/rotate
+   bersama clip (karena bukan child dari transform chain).
+   ============================================================ */
+
+.preview-selection-overlay {
+  position: absolute;
+  display: none;
+  pointer-events: none;
+  z-index: 3;
+  border: 2px dashed var(--accent);
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+}
+
+/* ---- Corner handles ---- */
+
+.preview-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  border: 2px solid #fff;
+  border-radius: 2px;
+  pointer-events: auto;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  box-sizing: border-box;
+}
+
+.preview-handle-nw {
+  top: -6px;
+  left: -6px;
+  cursor: nwse-resize;
+}
+
+.preview-handle-ne {
+  top: -6px;
+  right: -6px;
+  cursor: nesw-resize;
+}
+
+.preview-handle-sw {
+  bottom: -6px;
+  left: -6px;
+  cursor: nesw-resize;
+}
+
+.preview-handle-se {
+  bottom: -6px;
+  right: -6px;
+  cursor: nwse-resize;
 }

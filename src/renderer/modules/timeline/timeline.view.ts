@@ -353,8 +353,8 @@ function renderTransitionBox(
   box.setAttribute(
     "title",
     hasTransition
-      ? `${junction.existingTransition!.kind} · ${junction.existingTransition!.durationSec}s`
-      : "Click to add transition",
+      ? `${junction.existingTransition!.kind} · ${junction.existingTransition!.durationSec}s — right-click for options`
+      : "Click to add · right-click to choose kind",
   );
 
   const icon = createIcon("blend");

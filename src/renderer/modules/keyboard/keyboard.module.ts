@@ -105,6 +105,9 @@ function dispatch(action: ShortcutAction): void {
     case "paste":
       actions.pasteAtPlayhead();
       return;
+    case "toggle-fullscreen":
+      actions.togglePreviewFullscreen();
+      return;
     case "placeholder":
       handlePlaceholder(action.id);
       return;

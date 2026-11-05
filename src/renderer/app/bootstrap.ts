@@ -7,6 +7,7 @@ import { mountTimeline } from "@modules/timeline/timeline.module";
 import { mountKeyboard } from "@modules/keyboard/keyboard.module";
 import { mountToast } from "@modules/toast/toast.module";
 import { seedDemoMedia, seedDemoClips } from "@state/demo";
+import { appStore } from "@state/appStore";
 
 let shell: AppShell | null = null;
 const cleanups: Array<() => void> = [];
@@ -32,6 +33,18 @@ export function bootstrap(): void {
   cleanups.push(mountKeyboard());
 
   if (!window.cutflow.app.isPackaged) {
+    /* Layout class sync — toggling hide-media / hide-inspector / etc. */
+    const layoutUnsub = appStore.subscribe((state) => {
+      const appEl = shell!.root;
+      appEl.classList.toggle("hide-media", state.ui.layout.mediaHidden);
+      appEl.classList.toggle("hide-inspector", state.ui.layout.inspectorHidden);
+      appEl.classList.toggle("hide-timeline", state.ui.layout.timelineHidden);
+      appEl.classList.toggle(
+        "preview-fullscreen",
+        state.ui.layout.previewFullscreen,
+      );
+    });
+    cleanups.push(layoutUnsub);
     // eslint-disable-next-line no-console
     console.info("[bootstrap] App shell ready");
   }

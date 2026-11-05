@@ -116,6 +116,18 @@ export interface TimelineViewState {
 }
 
 /* ============================================================
+   LAYOUT (F14v)
+   ------------------------------------------------------------
+   Visibility state untuk panel. Semua default = visible.
+   ============================================================ */
+export interface LayoutState {
+  readonly mediaHidden: boolean;
+  readonly inspectorHidden: boolean;
+  readonly timelineHidden: boolean;
+  readonly previewFullscreen: boolean;
+}
+
+/* ============================================================
    UI — AGGREGATE
    ------------------------------------------------------------
    Semua ephemeral UI state per panel dalam satu slice `ui`.
@@ -128,6 +140,7 @@ export interface UiState {
   readonly media: MediaPanelState;
   readonly inspector: InspectorPanelState;
   readonly timeline: TimelineViewState;
+  readonly layout: LayoutState;
 }
 
 /* ============================================================

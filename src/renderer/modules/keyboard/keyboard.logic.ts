@@ -25,6 +25,7 @@ export type ShortcutAction =
   | { readonly type: "copy" }
   | { readonly type: "cut" }
   | { readonly type: "paste" }
+  | { readonly type: "toggle-fullscreen" }
   | { readonly type: "placeholder"; readonly id: string };
 
 export interface Shortcut {
@@ -61,6 +62,12 @@ export const SHORTCUTS: readonly Shortcut[] = [
   {
     match: (ev) => ev.code === "End",
     action: { type: "goto-end" },
+    preventDefault: true,
+  },
+  {
+    match: (ev) =>
+      ev.code === "KeyF" && !isPrimary(ev) && !ev.altKey && !ev.shiftKey,
+    action: { type: "toggle-fullscreen" },
     preventDefault: true,
   },
 

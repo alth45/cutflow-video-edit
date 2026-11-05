@@ -205,7 +205,7 @@ interface ClipBase {
   readonly colorToken: ClipColorToken;
   readonly transform: ClipTransform;
   readonly color: ClipColor;
-  readonly audio: ClipAudio; 
+  readonly audio: ClipAudio;
 }
 
 /**

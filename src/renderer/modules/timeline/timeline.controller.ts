@@ -37,6 +37,7 @@ import { getTransitionById } from "@state/selectors";
 
 import { openTextEditor } from "./text-editor.module";
 import { getClipById } from "@state/selectors";
+import { openTransitionKindMenu } from "./transition-kind-menu";
 
 /* Threshold gerakan minimum (px) sebelum drag dianggap mulai —
    membedakan click (select only) dari drag (move). */
@@ -214,6 +215,53 @@ export function attachTimelineController(view: TimelineView): () => void {
       if (beforeClipId && afterClipId) {
         actions.addTransition(track.id, beforeClipId, afterClipId);
       }
+    }),
+  );
+
+  /* ---- Transition box right-click → kind menu ---- */
+  cleanups.push(
+    on(view.tracksContainer, "contextmenu", (ev) => {
+      const target = ev.target;
+      if (!(target instanceof Element)) return;
+      const box = target.closest<HTMLElement>(".transition-box");
+      if (!box) return;
+
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      const state = appStore.getState();
+      if (state.ui.timeline.activeTool === "hand") return;
+      if (state.ui.timeline.activeTool === "razor") return;
+
+      const beforeClipId = box.dataset["beforeClipId"];
+      const afterClipId = box.dataset["afterClipId"];
+      if (!beforeClipId || !afterClipId) return;
+
+      const track = state.project.sequence.tracks.find((t) =>
+        t.clips.some((c) => c.id === beforeClipId),
+      );
+      if (!track || track.locked) return;
+
+      const transitionId = box.dataset["transitionId"];
+      const existing = transitionId
+        ? (track.transitions.find((t) => t.id === transitionId) ?? null)
+        : null;
+
+      /* Select filled box for visual feedback sebelum menu. */
+      if (existing) actions.selectTransition(existing.id);
+
+      openTransitionKindMenu(
+        box,
+        existing?.kind ?? null,
+        (kind) => {
+          if (existing) {
+            actions.setTransitionKind(existing.id, kind);
+          } else {
+            actions.addTransition(track.id, beforeClipId, afterClipId, kind);
+          }
+        },
+        existing ? () => actions.removeTransition(existing.id) : undefined,
+      );
     }),
   );
 

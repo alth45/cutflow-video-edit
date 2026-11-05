@@ -7,7 +7,13 @@ import { renderPreview, type PreviewView } from "./preview.view";
 import { attachPreviewController } from "./preview.controller";
 import { createPlaybackTicker } from "./playback.ticker";
 import { formatTimecode } from "./playback.logic";
-import { getActiveClipsAtTime, type ActiveClipInfo } from "./preview.logic";
+import {
+  getActiveClipsAtTime,
+  getTransitionSample, // ← TAMBAH
+  sequenceHasAnyClip,
+  isClipActiveAt,
+  type ActiveClipInfo,
+} from "./preview.logic";
 import {
   DEFAULT_CLIP_TRANSFORM,
   DEFAULT_CLIP_COLOR,
@@ -20,6 +26,11 @@ import type {
   ClipColor,
   ClipAudio,
 } from "@shared/types/timeline";
+
+import { getClipById } from "@state/selectors";
+import { pixelDeltaToPosition, clampPosition } from "./overlay-drag.logic";
+import * as actions from "@state/actions";
+import { on } from "@core/Dom";
 /* ============================================================
    PREVIEW MODULE — ENTRY
    ============================================================ */
@@ -69,7 +80,10 @@ export function mountPreview(container: HTMLElement): () => void {
     const seqChanged = state.project.sequence !== prev.project.sequence;
     const playStateChanged = state.playback.playing !== prev.playback.playing;
 
-    if (timeChanged || seqChanged || playStateChanged) {
+    const selectionChanged =
+      state.selection.selectedClipIds !== prev.selection.selectedClipIds;
+
+    if (timeChanged || seqChanged || playStateChanged || selectionChanged) {
       renderComposite(view, state, videoCache, renderedClips);
       syncAudio(state, state.playback.playing, audioCache);
     }
@@ -77,11 +91,16 @@ export function mountPreview(container: HTMLElement): () => void {
 
   /* Initial composite render (di F5 default state = kosong). */
   renderComposite(view, initial, videoCache, renderedClips);
-  syncAudio(initial, false, audioCache); // ← TAMBAH
+  syncAudio(initial, false, audioCache);
+  /* Attach overlay drag + selection outline sync. */
+  const detachDrag = attachOverlayDrag(view);
+  const detachResize = attachOverlayResize(view); // ← TAMBAH
 
   const detach = attachPreviewController(view);
 
   return () => {
+    detachDrag();
+    detachResize();
     detach();
     unsubscribe();
     ticker.stop();
@@ -155,8 +174,16 @@ function renderComposite(
       el = created;
     }
 
-    updateClipVisual(el, info, playing);
+    updateClipVisual(el, info, playing, state);
   }
+  /* Sync .selected class pada clip overlay aktif. */
+  const activeSelectedId = state.selection.selectedClipIds[0] ?? null;
+  for (const [clipId, el] of renderedClips) {
+    el.classList.toggle("selected", clipId === activeSelectedId);
+  }
+
+  /* Position selection overlay at selected clip bounds. */
+  updateSelectionOverlay(view, renderedClips);
 }
 
 /* ============================================================
@@ -174,27 +201,70 @@ function createClipVisual(
   wrapper.className = "preview-clip";
   wrapper.dataset["clipId"] = clip.id;
 
+  const content = document.createElement("div");
+  content.className = "preview-clip-content";
+
   switch (visualType) {
+    // case "text": {
+    //   wrapper.classList.add("text");
+    //   const textEl = document.createElement("div");
+    //   textEl.className = "preview-text";
+    //   textEl.textContent =
+    //     clip.source.kind === "text" ? clip.source.content : "";
+    //   content.append(textEl);
+    //   wrapper.append(content);
+    //   applyVisualTransform(wrapper, clip);
+    //   return wrapper;
+    // }
     case "text": {
+      wrapper.classList.add("text");
       const textEl = document.createElement("div");
       textEl.className = "preview-text";
       textEl.textContent =
         clip.source.kind === "text" ? clip.source.content : "";
-      wrapper.append(textEl);
-      applyVisualTransform(wrapper, clip);
+      content.append(textEl);
+      wrapper.append(content);
+      const sample = getTransitionSample(
+        state,
+        clip.id,
+        state.playback.currentTimeSec,
+      );
+      applyVisualTransform(
+        wrapper,
+        clip,
+        sample.opacity,
+        sample.translateX ?? 0,
+      );
+      wrapper.style.zIndex = String(
+        computeZIndex(state, info.track.id, sample.layer === "source"),
+      );
       return wrapper;
     }
 
     case "video": {
+      wrapper.classList.add("media");
       const asset = state.project.mediaAssets.find(
         (a) => clip.source.kind === "media" && a.id === clip.source.mediaId,
       );
       if (!asset) return null;
 
-      /* Demo path → tidak ada file fisik, render placeholder */
       if (isDemoPath(asset.path)) {
-        wrapper.append(createPlaceholderVisual(asset.name, "video"));
-        applyVisualTransform(wrapper, clip);
+        content.append(createPlaceholderVisual(asset.name, "video"));
+        wrapper.append(content);
+        const sample = getTransitionSample(
+          state,
+          clip.id,
+          state.playback.currentTimeSec,
+        );
+        applyVisualTransform(
+          wrapper,
+          clip,
+          sample.opacity,
+          sample.translateX ?? 0,
+        );
+        wrapper.style.zIndex = String(
+          computeZIndex(state, info.track.id, sample.layer === "source"),
+        );
         return wrapper;
       }
 
@@ -206,24 +276,41 @@ function createClipVisual(
       video.currentTime = localTimeSec;
       video.addEventListener("error", () => {
         video.remove();
-        if (!wrapper.querySelector(".preview-placeholder")) {
-          wrapper.append(createPlaceholderVisual(asset.name, "video"));
+        if (!content.querySelector(".preview-placeholder")) {
+          content.append(createPlaceholderVisual(asset.name, "video"));
         }
       });
-      wrapper.append(video);
+      content.append(video);
+      wrapper.append(content);
       videoCache.set(clip.id, video);
+      applyVisualTransform(wrapper, clip);
       return wrapper;
     }
 
     case "image": {
+      wrapper.classList.add("media");
       const asset = state.project.mediaAssets.find(
         (a) => clip.source.kind === "media" && a.id === clip.source.mediaId,
       );
       if (!asset) return null;
 
       if (isDemoPath(asset.path)) {
-        wrapper.append(createPlaceholderVisual(asset.name, "image"));
-        applyVisualTransform(wrapper, clip);
+        content.append(createPlaceholderVisual(asset.name, "image"));
+        wrapper.append(content);
+        const sample = getTransitionSample(
+          state,
+          clip.id,
+          state.playback.currentTimeSec,
+        );
+        applyVisualTransform(
+          wrapper,
+          clip,
+          sample.opacity,
+          sample.translateX ?? 0,
+        );
+        wrapper.style.zIndex = String(
+          computeZIndex(state, info.track.id, sample.layer === "source"),
+        );
         return wrapper;
       }
 
@@ -232,11 +319,13 @@ function createClipVisual(
       img.alt = asset.name;
       img.addEventListener("error", () => {
         img.remove();
-        if (!wrapper.querySelector(".preview-placeholder")) {
-          wrapper.append(createPlaceholderVisual(asset.name, "image"));
+        if (!content.querySelector(".preview-placeholder")) {
+          content.append(createPlaceholderVisual(asset.name, "image"));
         }
       });
-      wrapper.append(img);
+      content.append(img);
+      wrapper.append(content);
+      applyVisualTransform(wrapper, clip);
       return wrapper;
     }
 
@@ -271,19 +360,27 @@ function updateClipVisual(
   el: HTMLElement,
   info: ActiveClipInfo,
   playing: boolean,
+  state: AppState,
 ): void {
   const { clip, track, visualType, localTimeSec } = info;
+  const timeSec = state.playback.currentTimeSec;
 
-  applyVisualTransform(el, clip);
+  const sample = getTransitionSample(state, clip.id, timeSec);
+  applyVisualTransform(el, clip, sample.opacity, sample.translateX ?? 0);
+  el.style.zIndex = String(
+    computeZIndex(state, track.id, sample.layer === "source"),
+  );
 
-  /* Video audio — unmute + volume + fade. */
+  /* Video audio — unmute + volume + fade, kali transition opacity. */
   if (visualType === "video") {
     const video = el.querySelector<HTMLVideoElement>("video");
     if (video) {
       const audio = clip.audio ?? DEFAULT_CLIP_AUDIO;
       const muted = track.muted || audio.muted;
       video.muted = muted;
-      video.volume = muted ? 0 : computeClipVolume(clip, localTimeSec);
+      video.volume = muted
+        ? 0
+        : computeClipVolume(clip, localTimeSec) * sample.opacity;
     }
   }
   switch (visualType) {
@@ -327,6 +424,28 @@ function updateClipVisual(
 }
 
 /* ============================================================
+   Z-INDEX COMPUTATION
+   ------------------------------------------------------------
+   Z-index berbasis track index (track 0 = top = tertinggi).
+   Transition source (beforeClip fade-out) mendapat +1 supaya
+   paint di atas target (afterClip), menghasilkan cross-dissolve
+   yang benar.
+   ============================================================ */
+
+function computeZIndex(
+  state: AppState,
+  trackId: string,
+  isSource: boolean,
+): number {
+  const tracks = state.project.sequence.tracks;
+  const idx = tracks.findIndex((t) => t.id === trackId);
+  if (idx < 0) return 1;
+
+  const base = (tracks.length - idx) * 10;
+  return isSource ? base + 1 : base;
+}
+
+/* ============================================================
    AUDIO PLAYBACK (F14s)
    ------------------------------------------------------------
    Audio clips play via <audio> elements. Video clips' embedded
@@ -346,9 +465,8 @@ function syncAudio(
 
     for (const clip of track.clips) {
       if (clip.kind !== "audio") continue;
-      const end = clip.startSec + clip.durationSec;
-      if (timeSec < clip.startSec || timeSec >= end) continue;
-
+      // const end = clip.startSec + clip.durationSec;
+      if (!isClipActiveAt(track, clip, timeSec)) continue;
       activeAudioIds.add(clip.id);
 
       const asset = state.project.mediaAssets.find(
@@ -369,7 +487,11 @@ function syncAudio(
       const clipAudio = clip.audio ?? DEFAULT_CLIP_AUDIO;
       const muted = track.muted || clipAudio.muted;
       audio.muted = muted;
-      audio.volume = muted ? 0 : computeClipVolume(clip, localTimeSec);
+
+      const sample = getTransitionSample(state, clip.id, timeSec);
+      audio.volume = muted
+        ? 0
+        : computeClipVolume(clip, localTimeSec) * sample.opacity;
 
       if (playing) {
         if (Math.abs(audio.currentTime - localTimeSec) > 0.3) {
@@ -426,13 +548,17 @@ function computeClipVolume(clip: Clip, localTimeSec: number): number {
    feather) ke wrapper `.preview-clip`. Wrapper full-size, jadi
    transform relatif ke wrapper = relatif ke monitor.
    ============================================================ */
-
-function applyVisualTransform(wrapper: HTMLElement, clip: Clip): void {
+function applyVisualTransform(
+  wrapper: HTMLElement,
+  clip: Clip,
+  transitionOpacity: number = 1,
+  transitionTranslateX: number = 0,
+): void {
   const t = clip.transform ?? DEFAULT_CLIP_TRANSFORM;
   const c = clip.color ?? DEFAULT_CLIP_COLOR;
 
-  /* ---- Transform ---- */
-  const xPct = t.positionX / 2;
+  /* ---- Transform (base + transition slide) ---- */
+  const xPct = t.positionX / 2 + transitionTranslateX;
   const yPct = t.positionY / 2;
 
   wrapper.style.transform = [
@@ -441,7 +567,8 @@ function applyVisualTransform(wrapper: HTMLElement, clip: Clip): void {
     `scale(${t.scale / 100})`,
   ].join(" ");
   wrapper.style.transformOrigin = "center center";
-  wrapper.style.opacity = String(t.opacity / 100);
+
+  wrapper.style.opacity = String((t.opacity / 100) * transitionOpacity);
 
   if (t.cropLeft > 0 || t.cropRight > 0) {
     wrapper.style.clipPath = `inset(0 ${t.cropRight}% 0 ${t.cropLeft}%)`;
@@ -486,4 +613,343 @@ function applyVisualTransform(wrapper: HTMLElement, clip: Clip): void {
   } else {
     overlay.style.display = "none";
   }
+}
+
+/* ============================================================
+   OVERLAY DRAG (F14t)
+   ------------------------------------------------------------
+   Klik-hold pada selection box (.preview-clip.selected) → drag
+   untuk ubah positionX/positionY.
+
+   Selama drag: DOM-only update (smooth). Mouseup: commit
+   via `setClipTransformBulk` (1 history entry).
+
+   Hanya aktif saat paused (playing = no-op).
+   ============================================================ */
+
+interface DragState {
+  readonly clipId: string;
+  readonly element: HTMLElement;
+  readonly startClientX: number;
+  readonly startClientY: number;
+  readonly startPositionX: number;
+  readonly startPositionY: number;
+  readonly monitorWidth: number;
+  readonly monitorHeight: number;
+  readonly rotation: number;
+  readonly scale: number;
+  moved: boolean;
+  lastX: number;
+  lastY: number;
+}
+
+function attachOverlayDrag(view: PreviewView): () => void {
+  let drag: DragState | null = null;
+
+  const onMouseDown = (ev: MouseEvent): void => {
+    if (ev.button !== 0) return;
+
+    const state = appStore.getState();
+    if (state.playback.playing) return;
+
+    const target = ev.target as Element;
+    if (!target) return;
+
+    const clipEl = target.closest<HTMLElement>(".preview-clip.selected");
+    if (!clipEl) return;
+
+    const clipId = clipEl.dataset["clipId"];
+    if (!clipId) return;
+
+    const clip = getClipById(state, clipId);
+    if (!clip) return;
+
+    const track = state.project.sequence.tracks.find((t) =>
+      t.clips.some((c) => c.id === clipId),
+    );
+    if (!track || track.locked) return;
+
+    const monitorRect = view.monitor.getBoundingClientRect();
+    if (monitorRect.width <= 0 || monitorRect.height <= 0) return;
+
+    const t = clip.transform ?? DEFAULT_CLIP_TRANSFORM;
+
+    drag = {
+      clipId,
+      element: clipEl,
+      startClientX: ev.clientX,
+      startClientY: ev.clientY,
+      startPositionX: t.positionX,
+      startPositionY: t.positionY,
+      monitorWidth: monitorRect.width,
+      monitorHeight: monitorRect.height,
+      rotation: t.rotation,
+      scale: t.scale,
+      moved: false,
+      lastX: t.positionX,
+      lastY: t.positionY,
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    document.body.style.cursor = "grabbing";
+    document.body.style.userSelect = "none";
+    ev.preventDefault();
+    ev.stopPropagation();
+  };
+
+  const onMouseMove = (ev: MouseEvent): void => {
+    if (!drag) return;
+
+    const dx = ev.clientX - drag.startClientX;
+    const dy = ev.clientY - drag.startClientY;
+
+    if (!drag.moved && Math.hypot(dx, dy) < 3) return;
+    drag.moved = true;
+
+    const delta = pixelDeltaToPosition(
+      dx,
+      dy,
+      drag.monitorWidth,
+      drag.monitorHeight,
+    );
+    const newX = clampPosition(drag.startPositionX + delta.x);
+    const newY = clampPosition(drag.startPositionY + delta.y);
+    drag.lastX = newX;
+    drag.lastY = newY;
+
+    /* DOM-only update (smooth during drag). */
+    const xPct = newX / 2;
+    const yPct = newY / 2;
+    drag.element.style.transform = `translate(${xPct}%, ${yPct}%) rotate(${drag.rotation}deg) scale(${drag.scale / 100})`;
+    refreshOverlayFromDom(view);
+  };
+
+  const onMouseUp = (): void => {
+    if (!drag) return;
+    const { clipId, startPositionX, startPositionY, lastX, lastY, moved } =
+      drag;
+
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+    drag = null;
+
+    if (!moved) return;
+    if (
+      Math.abs(lastX - startPositionX) < 0.05 &&
+      Math.abs(lastY - startPositionY) < 0.05
+    ) {
+      return;
+    }
+
+    /* Commit — 1 history entry. */
+    actions.setClipTransformBulk(clipId, {
+      positionX: Math.round(lastX * 10) / 10,
+      positionY: Math.round(lastY * 10) / 10,
+    });
+  };
+
+  return on(view.compositeLayer, "mousedown", onMouseDown as EventListener);
+}
+
+/* ============================================================
+   SELECTION OVERLAY (F14u)
+   ------------------------------------------------------------
+   Overlay terpisah di `.monitor` (di luar transform chain clip).
+   Bounds di-sync dari `.preview-clip-content` getBoundingClientRect
+   setiap render. Handles selalu axis-aligned (tidak ikut rotate/scale).
+   ============================================================ */
+
+function updateSelectionOverlay(
+  view: PreviewView,
+  renderedClips: Map<string, HTMLElement>,
+): void {
+  const state = appStore.getState();
+  const selectedId = state.selection.selectedClipIds[0];
+
+  if (!selectedId) {
+    view.selectionOverlay.style.display = "none";
+    return;
+  }
+
+  const clipEl = renderedClips.get(selectedId);
+  if (!clipEl) {
+    view.selectionOverlay.style.display = "none";
+    return;
+  }
+
+  const content = clipEl.querySelector<HTMLElement>(".preview-clip-content");
+  if (!content) {
+    view.selectionOverlay.style.display = "none";
+    return;
+  }
+
+  const monitorRect = view.monitor.getBoundingClientRect();
+  const contentRect = content.getBoundingClientRect();
+
+  if (contentRect.width <= 0 || contentRect.height <= 0) {
+    view.selectionOverlay.style.display = "none";
+    return;
+  }
+
+  view.selectionOverlay.style.display = "block";
+  view.selectionOverlay.style.left = `${contentRect.left - monitorRect.left}px`;
+  view.selectionOverlay.style.top = `${contentRect.top - monitorRect.top}px`;
+  view.selectionOverlay.style.width = `${contentRect.width}px`;
+  view.selectionOverlay.style.height = `${contentRect.height}px`;
+}
+
+function refreshOverlayFromDom(view: PreviewView): void {
+  const selectedId = appStore.getState().selection.selectedClipIds[0];
+  if (!selectedId) return;
+
+  const clipEl = view.compositeLayer.querySelector<HTMLElement>(
+    `.preview-clip[data-clip-id="${selectedId}"]`,
+  );
+  if (!clipEl) return;
+  const content = clipEl.querySelector<HTMLElement>(".preview-clip-content");
+  if (!content) return;
+
+  const monitorRect = view.monitor.getBoundingClientRect();
+  const contentRect = content.getBoundingClientRect();
+  if (contentRect.width <= 0 || contentRect.height <= 0) return;
+
+  const overlay = view.selectionOverlay;
+  overlay.style.left = `${contentRect.left - monitorRect.left}px`;
+  overlay.style.top = `${contentRect.top - monitorRect.top}px`;
+  overlay.style.width = `${contentRect.width}px`;
+  overlay.style.height = `${contentRect.height}px`;
+}
+
+/* ============================================================
+   OVERLAY RESIZE (F14u)
+   ------------------------------------------------------------
+   Drag corner handle → scale uniform around center.
+   Formula: newWidth = startWidth + 2*delta
+            delta = (dx*signX + dy*signY) / 2
+   sign = +1 untuk side kanan/bawah, -1 untuk kiri/atas.
+   ============================================================ */
+
+interface ResizeState {
+  readonly clipId: string;
+  readonly startScale: number;
+  readonly startWidth: number;
+  readonly startX: number;
+  readonly startY: number;
+  readonly signX: 1 | -1;
+  readonly signY: 1 | -1;
+  moved: boolean;
+  lastScale: number;
+}
+
+function attachOverlayResize(view: PreviewView): () => void {
+  let resize: ResizeState | null = null;
+
+  const onMouseDown = (ev: MouseEvent): void => {
+    if (ev.button !== 0) return;
+
+    const state = appStore.getState();
+    if (state.playback.playing) return;
+
+    const target = ev.target as Element;
+    if (!target) return;
+
+    const handleEl = target.closest<HTMLElement>(".preview-handle");
+    if (!handleEl) return;
+
+    const selectedId = state.selection.selectedClipIds[0];
+    if (!selectedId) return;
+
+    const clip = getClipById(state, selectedId);
+    if (!clip) return;
+
+    const track = state.project.sequence.tracks.find((t) =>
+      t.clips.some((c) => c.id === selectedId),
+    );
+    if (!track || track.locked) return;
+
+    const width = parseFloat(view.selectionOverlay.style.width) || 0;
+    if (width <= 0) return;
+
+    const handlePos = handleEl.dataset["handle"];
+    const signX: 1 | -1 = handlePos === "nw" || handlePos === "sw" ? -1 : 1;
+    const signY: 1 | -1 = handlePos === "nw" || handlePos === "ne" ? -1 : 1;
+
+    const t = clip.transform ?? DEFAULT_CLIP_TRANSFORM;
+
+    resize = {
+      clipId: selectedId,
+      startScale: t.scale,
+      startWidth: width,
+      startX: ev.clientX,
+      startY: ev.clientY,
+      signX,
+      signY,
+      moved: false,
+      lastScale: t.scale,
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    document.body.style.userSelect = "none";
+    ev.preventDefault();
+    ev.stopPropagation();
+  };
+
+  const onMouseMove = (ev: MouseEvent): void => {
+    if (!resize) return;
+
+    const dx = ev.clientX - resize.startX;
+    const dy = ev.clientY - resize.startY;
+
+    if (!resize.moved && Math.hypot(dx, dy) < 3) return;
+    resize.moved = true;
+
+    const delta = (dx * resize.signX + dy * resize.signY) / 2;
+    const newWidth = resize.startWidth + 2 * delta;
+    if (newWidth <= 0) return;
+
+    const newScale = Math.max(
+      10,
+      Math.min(200, resize.startScale * (newWidth / resize.startWidth)),
+    );
+    resize.lastScale = newScale;
+
+    /* DOM-only update (smooth during resize). */
+    const clipEl = view.compositeLayer.querySelector<HTMLElement>(
+      `.preview-clip[data-clip-id="${resize.clipId}"]`,
+    );
+    if (!clipEl) return;
+
+    const state = appStore.getState();
+    const clip = getClipById(state, resize.clipId);
+    if (!clip) return;
+    const t = clip.transform ?? DEFAULT_CLIP_TRANSFORM;
+    const xPct = t.positionX / 2;
+    const yPct = t.positionY / 2;
+    clipEl.style.transform = `translate(${xPct}%, ${yPct}%) rotate(${t.rotation}deg) scale(${newScale / 100})`;
+
+    refreshOverlayFromDom(view);
+  };
+
+  const onMouseUp = (): void => {
+    if (!resize) return;
+    const { clipId, startScale, lastScale, moved } = resize;
+
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
+    document.body.style.userSelect = "";
+    resize = null;
+
+    if (!moved) return;
+    if (Math.abs(lastScale - startScale) < 0.5) return;
+
+    actions.setClipTransformBulk(clipId, {
+      scale: Math.round(lastScale * 10) / 10,
+    });
+  };
+
+  return on(view.selectionOverlay, "mousedown", onMouseDown as EventListener);
 }

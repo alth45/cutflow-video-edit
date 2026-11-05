@@ -16,7 +16,9 @@ import type { AppState } from "@shared/types/state";
 export interface PreviewView {
   readonly root: HTMLElement;
   readonly seqMeta: HTMLElement;
+  readonly monitor: HTMLElement;
   readonly compositeLayer: HTMLElement;
+  readonly selectionOverlay: HTMLElement;
   readonly playOverlay: HTMLElement;
   readonly btnPlay: HTMLButtonElement;
   readonly playIconSvg: SVGElement;
@@ -68,13 +70,37 @@ export function renderPreview(state: AppState): PreviewView {
   const monitor = el("div", { className: "monitor" });
 
   const inner = el("div", { className: "monitor-inner" });
-  inner.append(
-    el("div", { className: "sun" }),
-    el("div", { className: "hills h2" }),
-    el("div", { className: "hills" }),
-  );
+
+  /* Empty state — tampil saat sequence tidak punya clip sama sekali. */
+  const emptyState = el("div", { className: "monitor-empty" });
+
+  const emptyLogo = el("div", { className: "monitor-empty-logo" });
+  emptyLogo.append(createIcon("play"));
+
+  const emptyName = el("div", {
+    className: "monitor-empty-name",
+    text: "CutFlow",
+  });
+
+  const emptyHint = el("div", {
+    className: "monitor-empty-hint",
+    text: "No media in timeline",
+  });
+
+  emptyState.append(emptyLogo, emptyName, emptyHint);
+  inner.append(emptyState);
 
   const compositeLayer = el("div", { className: "monitor-composite" });
+
+  /* Selection overlay + corner handles (F14u) */
+  const selectionOverlay = el("div", {
+    className: "preview-selection-overlay",
+  });
+  for (const pos of ["nw", "ne", "sw", "se"] as const) {
+    const h = el("div", { className: `preview-handle preview-handle-${pos}` });
+    h.dataset["handle"] = pos;
+    selectionOverlay.append(h);
+  }
 
   const safeArea = el("div", { className: "safe-area" });
 
@@ -87,7 +113,13 @@ export function renderPreview(state: AppState): PreviewView {
   btnBigPlay.append(createIcon("play"));
   playOverlay.append(btnBigPlay);
 
-  monitor.append(inner, compositeLayer, safeArea, playOverlay);
+  monitor.append(
+    inner,
+    compositeLayer,
+    safeArea,
+    playOverlay,
+    selectionOverlay,
+  );
   stage.append(monitor);
 
   /* ---------- Transport ---------- */
@@ -154,7 +186,9 @@ export function renderPreview(state: AppState): PreviewView {
   return {
     root,
     seqMeta,
+    monitor,
     compositeLayer,
+    selectionOverlay,
     playOverlay,
     btnPlay,
     playIconSvg,

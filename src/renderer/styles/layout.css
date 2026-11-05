@@ -315,3 +315,51 @@ body {
   font-size: var(--text-size-120);
   letter-spacing: 0.3px;
 }
+
+/* ============================================================
+   LAYOUT TOGGLES (F14v)
+   ------------------------------------------------------------
+   Class di `.app` (di-set oleh bootstrap subscriber):
+   - .hide-media     → media panel collapsed
+   - .hide-inspector → inspector collapsed
+   - .hide-timeline  → timeline collapsed
+   - .preview-fullscreen → preview fullscreen mode
+   ============================================================ */
+
+.app.hide-media {
+  grid-template-columns: 0 minmax(0, 1fr) 274px;
+}
+.app.hide-media .media {
+  display: none;
+}
+
+.app.hide-inspector {
+  grid-template-columns: 268px minmax(0, 1fr) 0;
+}
+.app.hide-inspector .inspector {
+  display: none;
+}
+
+.app.hide-media.hide-inspector {
+  grid-template-columns: 0 minmax(0, 1fr) 0;
+}
+
+.app.hide-timeline {
+  grid-template-rows: 48px minmax(0, 1fr) 0;
+}
+.app.hide-timeline .timeline {
+  display: none;
+}
+
+/* Fullscreen preview: preview takes over entire app area. */
+.app.preview-fullscreen {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  grid-template-areas: "preview";
+}
+.app.preview-fullscreen .topbar,
+.app.preview-fullscreen .media,
+.app.preview-fullscreen .inspector,
+.app.preview-fullscreen .timeline {
+  display: none;
+}

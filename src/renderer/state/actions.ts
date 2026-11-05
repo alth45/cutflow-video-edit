@@ -457,6 +457,42 @@ export function addTransition(
   });
 }
 
+/**
+ * Ubah jenis transition. 1 history entry. Visual di preview
+ * otomatis reflect via `getTransitionSample` (F14w/F14x).
+ */
+export function setTransitionKind(
+  transitionId: string,
+  kind: TransitionKind,
+): void {
+  appStore.setState((state) => {
+    for (const track of state.project.sequence.tracks) {
+      if (track.locked) continue;
+
+      const idx = track.transitions.findIndex((t) => t.id === transitionId);
+      if (idx < 0) continue;
+
+      const tr = track.transitions[idx];
+      if (!tr || tr.kind === kind) return state;
+
+      const nextTransitions = [...track.transitions];
+      nextTransitions[idx] = { ...tr, kind };
+
+      const nextProject = {
+        ...state.project,
+        sequence: {
+          ...state.project.sequence,
+          tracks: state.project.sequence.tracks.map((t) =>
+            t.id === track.id ? { ...t, transitions: nextTransitions } : t,
+          ),
+        },
+      };
+      return withProject(state, nextProject);
+    }
+    return state;
+  });
+}
+
 /** Hapus transition berdasarkan ID (cari track-nya). */
 export function removeTransition(transitionId: string): void {
   appStore.setState((state) => {
@@ -607,6 +643,84 @@ export function toggleSnap(): void {
       },
     },
   }));
+}
+
+/* ============================================================
+   LAYOUT (F14v)
+   ------------------------------------------------------------
+   Toggle visibility panel + fullscreen preview.
+   ============================================================ */
+
+export function toggleLayoutPanel(
+  panel: "media" | "inspector" | "timeline",
+): void {
+  appStore.setState((state) => {
+    const key = `${panel}Hidden` as
+      | "mediaHidden"
+      | "inspectorHidden"
+      | "timelineHidden";
+    return {
+      ...state,
+      ui: {
+        ...state.ui,
+        layout: { ...state.ui.layout, [key]: !state.ui.layout[key] },
+      },
+    };
+  });
+}
+
+export function togglePreviewFullscreen(): void {
+  appStore.setState((state) => ({
+    ...state,
+    ui: {
+      ...state.ui,
+      layout: {
+        ...state.ui.layout,
+        previewFullscreen: !state.ui.layout.previewFullscreen,
+      },
+    },
+  }));
+}
+
+/** Tambah track baru. Video track di atas (index 0), audio di bawah. */
+export function addTrack(kind: TrackKind): void {
+  appStore.setState((state) => {
+    const tracks = state.project.sequence.tracks;
+    const prefix = kind === "video" ? "V" : "A";
+
+    /* Cari nomor tertinggi untuk prefix ini. */
+    let maxNum = 0;
+    for (const t of tracks) {
+      if (t.kind !== kind) continue;
+      const m = t.name.match(/^[VA](\d+)$/);
+      if (m) {
+        const n = parseInt(m[1]!, 10);
+        if (Number.isFinite(n) && n > maxNum) maxNum = n;
+      }
+    }
+
+    const newTrack: Track = {
+      id: makeId("track"),
+      kind,
+      name: `${prefix}${maxNum + 1}`,
+      clips: [],
+      transitions: [],
+      muted: false,
+      locked: false,
+      hidden: false,
+    };
+
+    const nextTracks =
+      kind === "video"
+        ? [newTrack, ...tracks] // video di atas
+        : [...tracks, newTrack]; // audio di bawah
+
+    const nextProject = {
+      ...state.project,
+      sequence: { ...state.project.sequence, tracks: nextTracks },
+    };
+    return withProject(state, nextProject);
+  });
 }
 
 /* ============================================================
@@ -1128,6 +1242,56 @@ export function setClipTransformProperty<K extends keyof ClipTransform>(
   });
 }
 
+/**
+ * Update multiple transform keys sekaligus (single history entry).
+ * Dipakai oleh preview drag (commit pada mouseup).
+ */
+export function setClipTransformBulk(
+  clipId: string,
+  updates: Partial<ClipTransform>,
+): void {
+  appStore.setState((state) => {
+    for (const track of state.project.sequence.tracks) {
+      if (track.locked) continue;
+
+      const idx = track.clips.findIndex((c) => c.id === clipId);
+      if (idx < 0) continue;
+
+      const clip = track.clips[idx];
+      if (!clip) return state;
+
+      const current = clip.transform ?? DEFAULT_CLIP_TRANSFORM;
+      const next = { ...current };
+      let changed = false;
+
+      const keys = Object.keys(updates) as Array<keyof ClipTransform>;
+      for (const key of keys) {
+        const value = updates[key];
+        if (value !== undefined && current[key] !== value) {
+          (next as Record<keyof ClipTransform, unknown>)[key] = value;
+          changed = true;
+        }
+      }
+      if (!changed) return state;
+
+      const nextClip: Clip = { ...clip, transform: next };
+      const nextClips = [...track.clips];
+      nextClips[idx] = nextClip;
+
+      const nextProject = {
+        ...state.project,
+        sequence: {
+          ...state.project.sequence,
+          tracks: state.project.sequence.tracks.map((t) =>
+            t.id === track.id ? { ...t, clips: nextClips } : t,
+          ),
+        },
+      };
+      return withProject(state, nextProject);
+    }
+    return state;
+  });
+}
 /* ============================================================
    CLIP COLOR
    ------------------------------------------------------------

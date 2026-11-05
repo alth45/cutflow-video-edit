@@ -110,3 +110,6 @@
 
 /* Text editor modal — double-click text clip */
 @import "./components/text-editor.css";
+
+/* Info dialog — Help → Shortcuts / About */
+@import "./components/dialog.css";

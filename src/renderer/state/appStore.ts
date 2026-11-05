@@ -85,6 +85,13 @@ export function createInitialState(): AppState {
         snapEnabled: true,
         activeTool: "pointer",
       },
+      layout: {
+        // ← TAMBAH
+        mediaHidden: false,
+        inspectorHidden: false,
+        timelineHidden: false,
+        previewFullscreen: false,
+      },
     },
   };
 }

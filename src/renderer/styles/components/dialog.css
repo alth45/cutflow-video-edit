@@ -1,0 +1,104 @@
+/* ============================================================
+   INFO DIALOG (F14v)
+   ============================================================ */
+
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: grid;
+  place-items: center;
+  z-index: var(--z-modal);
+  animation: dialogFadeIn var(--duration-fast) ease-out;
+}
+
+.dialog-modal {
+  width: min(480px, 90vw);
+  max-height: 80vh;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-7);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  animation: dialogModalIn var(--duration) var(--easing-out);
+}
+
+.dialog-title {
+  font-size: var(--text-size-135);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+}
+
+.dialog-content {
+  color: var(--text);
+  font-size: var(--text-size-125);
+  line-height: var(--lh-relaxed);
+  overflow-y: auto;
+  max-height: 50vh;
+}
+
+.dialog-content code {
+  background: var(--panel-3);
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  color: #c4b6ff;
+}
+
+.dialog-content kbd {
+  display: inline-block;
+  background: var(--panel-3);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-xs);
+  padding: 1px 6px;
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  color: var(--text);
+  min-width: 20px;
+  text-align: center;
+  margin: 0 1px;
+}
+
+.dialog-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-size-120);
+}
+
+.dialog-content table td {
+  padding: var(--space-2) 0;
+  vertical-align: middle;
+}
+
+.dialog-content table td:first-child {
+  color: var(--muted);
+}
+
+.dialog-content table td:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+@keyframes dialogFadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes dialogModalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-8px);
+  }
+}

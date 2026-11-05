@@ -31,6 +31,9 @@ import {
   AlertTriangle,
   X,
   Blend,
+  Moon,
+  ArrowRight,
+  MoveHorizontal,
   createElement,
   type IconNode,
 } from "lucide";
@@ -80,7 +83,7 @@ const ICONS = {
   "zoom-out": ZoomOut,
   fullscreen: Maximize,
   volume: Volume2,
-  "volume-muted": VolumeX, 
+  "volume-muted": VolumeX,
 
   /* Tracks */
   film: Film,
@@ -90,6 +93,9 @@ const ICONS = {
   chevron: ChevronDown,
   /* Transitions */
   blend: Blend,
+  moon: Moon,
+  "arrow-right": ArrowRight,
+  "move-horizontal": MoveHorizontal,
   /* Feedback */
   info: Info,
   check: Check,
