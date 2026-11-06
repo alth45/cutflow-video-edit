@@ -584,3 +584,22 @@
   right: -6px;
   cursor: nwse-resize;
 }
+
+/* ============================================================
+   VIGNETTE OVERLAY (F14aa)
+   ------------------------------------------------------------
+   Radial gradient yang digelapkan di pinggir frame. Warna
+   didelegasikan via `--vignette-color` (di-set dari JS).
+   ============================================================ */
+.preview-clip.has-vignette::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 30%,
+    var(--vignette-color, rgba(0, 0, 0, 0.54)) 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+}

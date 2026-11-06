@@ -23,7 +23,8 @@ export type IdPrefix =
   | "seq" // sequence
   | "track"
   | "clip"
-  | "media";
+  | "media"
+  | "effect";
 
 /**
  * Hasilkan ID unik dengan format `<prefix>_<uuid-v4>`.

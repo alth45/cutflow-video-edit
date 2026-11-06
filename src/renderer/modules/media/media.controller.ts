@@ -2,9 +2,17 @@ import { on, delegate } from "@core/Dom";
 import * as actions from "@state/actions";
 import { appStore } from "@state/appStore";
 import type { MediaView } from "./media.view";
+import { eventBus } from "@core/events";
+import type { EffectKind } from "@shared/types/timeline";
 
 export interface MediaControllerCallbacks {
   readonly onImportClick: () => void;
+}
+function toast(
+  message: string,
+  tone: "info" | "success" | "warning" | "error" = "info",
+): void {
+  eventBus.emit("toast:show", { message, tone });
 }
 
 export function attachMediaController(
@@ -63,6 +71,30 @@ export function attachMediaController(
         if (!name) return;
         ev.dataTransfer?.setData("application/x-cutflow-item", name);
         if (ev.dataTransfer) ev.dataTransfer.effectAllowed = "copy";
+      },
+    ),
+  );
+
+  /* ---- Click effect → apply to selected clip ---- */
+  cleanups.push(
+    delegate(
+      view.fxContainer,
+      "click",
+      ".list-item[data-effect-kind]",
+      (ev, item) => {
+        ev.stopPropagation();
+        const kind = (item as HTMLElement).dataset["effectKind"] as
+          | EffectKind
+          | undefined;
+        if (!kind) return;
+
+        const state = appStore.getState();
+        const selectedId = state.selection.selectedClipIds[0];
+        if (!selectedId) {
+          toast("Select a clip first", "warning");
+          return;
+        }
+        actions.addEffectToClip(selectedId, kind);
       },
     ),
   );

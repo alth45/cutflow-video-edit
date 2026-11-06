@@ -24,6 +24,8 @@ import type {
   ClipColor,
   ClipAudio,
   TextClipStyle,
+  EffectKind,
+  ClipEffect,
 } from "@shared/types/timeline";
 import type {
   AppState,
@@ -36,6 +38,8 @@ import { ZOOM, TIMELINE } from "@shared/constants";
 import type { TimelineTool } from "@shared/types/state";
 import { makeId } from "@utils/id";
 import { setClipboard, getClipboard, type ClipboardEntry } from "./clipboard";
+import { createDefaultEffect } from "@modules/effects/effect.logic";
+
 /* ============================================================
    ACTIONS
    ------------------------------------------------------------
@@ -976,6 +980,94 @@ export function deleteClip(clipId: string): void {
 }
 
 /* ============================================================
+   CLIP EFFECTS (F14aa)
+   ------------------------------------------------------------
+   Add / toggle / remove effect pada clip.
+   - Add: kalau effect kind sudah ada → toggle enabled.
+   - Remove: hapus dari array.
+   ============================================================ */
+
+export function addEffectToClip(clipId: string, kind: EffectKind): void {
+  appStore.setState((state) => {
+    for (const track of state.project.sequence.tracks) {
+      if (track.locked) continue;
+
+      const idx = track.clips.findIndex((c) => c.id === clipId);
+      if (idx < 0) continue;
+
+      const clip = track.clips[idx];
+      if (!clip) return state;
+
+      const effects = clip.effects ?? [];
+      const existing = effects.find((e) => e.kind === kind);
+
+      let nextEffects: readonly ClipEffect[];
+
+      if (existing) {
+        /* Toggle enabled. */
+        nextEffects = effects.map((e) =>
+          e.id === existing.id ? { ...e, enabled: !e.enabled } : e,
+        );
+      } else {
+        const newEffect = createDefaultEffect(kind);
+        if (!newEffect) return state;
+        nextEffects = [...effects, newEffect];
+      }
+
+      const nextClip: Clip = { ...clip, effects: nextEffects };
+      const nextClips = [...track.clips];
+      nextClips[idx] = nextClip;
+
+      const nextProject = {
+        ...state.project,
+        sequence: {
+          ...state.project.sequence,
+          tracks: state.project.sequence.tracks.map((t) =>
+            t.id === track.id ? { ...t, clips: nextClips } : t,
+          ),
+        },
+      };
+      return withProject(state, nextProject);
+    }
+    return state;
+  });
+}
+
+export function removeEffectFromClip(clipId: string, effectId: string): void {
+  appStore.setState((state) => {
+    for (const track of state.project.sequence.tracks) {
+      if (track.locked) continue;
+
+      const idx = track.clips.findIndex((c) => c.id === clipId);
+      if (idx < 0) continue;
+
+      const clip = track.clips[idx];
+      if (!clip) return state;
+
+      const effects = clip.effects ?? [];
+      if (!effects.some((e) => e.id === effectId)) return state;
+
+      const nextEffects = effects.filter((e) => e.id !== effectId);
+      const nextClip: Clip = { ...clip, effects: nextEffects };
+      const nextClips = [...track.clips];
+      nextClips[idx] = nextClip;
+
+      const nextProject = {
+        ...state.project,
+        sequence: {
+          ...state.project.sequence,
+          tracks: state.project.sequence.tracks.map((t) =>
+            t.id === track.id ? { ...t, clips: nextClips } : t,
+          ),
+        },
+      };
+      return withProject(state, nextProject);
+    }
+    return state;
+  });
+}
+
+/* ============================================================
    CLIPBOARD OPERATIONS
    ------------------------------------------------------------
    Copy / cut / paste untuk clip. Internal clipboard (module
@@ -1590,6 +1682,7 @@ export function addTextClip(trackId: string, startSec: number): void {
       transform: DEFAULT_CLIP_TRANSFORM,
       color: DEFAULT_CLIP_COLOR,
       audio: DEFAULT_CLIP_AUDIO,
+      effects: [],
       source: { kind: "text", content: "Text", style: DEFAULT_TEXT_STYLE },
     };
 

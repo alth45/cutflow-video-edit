@@ -10,6 +10,7 @@ import {
 } from "./media.view";
 import { attachMediaController } from "./media.controller";
 import { importMediaFlow } from "../../app/flows";
+import { getActiveClip } from "@state/selectors";
 
 export function mountMedia(container: HTMLElement): () => void {
   const initial = appStore.getState();
@@ -27,18 +28,30 @@ export function mountMedia(container: HTMLElement): () => void {
     const assetsChanged =
       state.project.mediaAssets !== prev.project.mediaAssets;
 
-    if (tabChanged) {
-      syncActiveTab(view, state);
-    }
+    const activeClip = getActiveClip(state);
+    const prevActiveClip = getActiveClip(prev);
+    const selectionChanged =
+      state.selection.selectedClipIds !== prev.selection.selectedClipIds;
+    const effectsChanged = activeClip?.effects !== prevActiveClip?.effects;
 
-    if (searchChanged) {
-      if (view.searchInput.value !== state.ui.media.searchQuery) {
-        view.searchInput.value = state.ui.media.searchQuery;
-      }
+    if (tabChanged) syncActiveTab(view, state);
+    if (
+      searchChanged &&
+      view.searchInput.value !== state.ui.media.searchQuery
+    ) {
+      view.searchInput.value = state.ui.media.searchQuery;
     }
 
     if (searchChanged || assetsChanged) {
       renderAllPanes(view, state);
+    } else if (selectionChanged || effectsChanged) {
+      /* Only fx pane needs refresh. */
+      renderEffectsPane(
+        view.fxContainer,
+        state.project.mediaAssets,
+        state.ui.media.searchQuery,
+        activeClip,
+      );
     }
   });
 
@@ -67,7 +80,8 @@ function syncActiveTab(view: MediaView, state: AppState): void {
 function renderAllPanes(view: MediaView, state: AppState): void {
   const assets = state.project.mediaAssets;
   const query = state.ui.media.searchQuery;
+  const activeClip = getActiveClip(state);
   renderMediaBin(view.binContainer, assets, query);
-  renderEffectsPane(view.fxContainer, assets, query);
+  renderEffectsPane(view.fxContainer, assets, query, activeClip);
   renderTransitionsPane(view.trContainer, assets, query);
 }

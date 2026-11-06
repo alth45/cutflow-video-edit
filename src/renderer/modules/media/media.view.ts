@@ -1,7 +1,6 @@
 import { el, clear } from "@core/Dom";
 import { createIcon } from "@core/icons";
 import {
-  EFFECTS,
   TRANSITIONS,
   filterMediaAssets,
   filterListEntries, // ← baru
@@ -15,6 +14,8 @@ import {
 import type { MediaAsset } from "@shared/types/project";
 import type { AppState, MediaPanelTab } from "@shared/types/state";
 import { mediaUrl, isDemoPath } from "@utils/media-url";
+import { EFFECT_DEFINITIONS } from "@modules/effects/effect-definitions";
+import type { Clip } from "@shared/types/timeline";
 
 /* ============================================================
    MEDIA VIEW
@@ -280,15 +281,15 @@ function renderThumb(asset: MediaAsset): HTMLElement {
      [Imported]              ← images, filtered by search
        [thumbnail] [thumbnail]
    ============================================================ */
-
 export function renderEffectsPane(
   container: HTMLElement,
   assets: readonly MediaAsset[],
   query: string,
+  activeClip: Clip | undefined,
 ): void {
   clear(container);
 
-  const filteredEffects = filterListEntries(EFFECTS, query);
+  const filteredEffects = filterListEntries(EFFECT_DEFINITIONS, query);
   const images = getImageAssets(assets);
   const filteredImages = filterMediaAssets(images, query);
 
@@ -302,9 +303,18 @@ export function renderEffectsPane(
     return;
   }
 
+  const activeKinds = new Set<string>();
+  for (const effect of activeClip?.effects ?? []) {
+    if (effect.enabled) activeKinds.add(effect.kind);
+  }
+
   if (builtInMatches) {
     container.append(renderBinLabel("Video Effects", filteredEffects.length));
-    for (const fx of filteredEffects) container.append(renderListItem(fx));
+    for (const effectDef of filteredEffects) {
+      const isActive = activeKinds.has(effectDef.kind);
+      const item = renderEffectItem(effectDef, isActive);
+      container.append(item);
+    }
   }
 
   if (importedMatches) {
@@ -313,6 +323,30 @@ export function renderEffectsPane(
   }
 }
 
+function renderEffectItem(
+  def: { kind: string; name: string; sub: string; gradientIndex: number },
+  isActive: boolean,
+): HTMLElement {
+  const item = el("div", {
+    className: `list-item${isActive ? " active" : ""}`,
+    attrs: { draggable: "true" },
+  });
+  item.dataset["effectKind"] = def.kind;
+  item.dataset["itemName"] = def.name;
+
+  const swatch = el("div", {
+    className: `swatch ${getGradientClass(def.gradientIndex - 1)}`,
+  });
+
+  const textWrap = el("div");
+  textWrap.append(
+    el("div", { className: "li-name", text: def.name }),
+    el("div", { className: "li-sub", text: def.sub }),
+  );
+
+  item.append(swatch, textWrap);
+  return item;
+}
 /* ============================================================
    RENDER: TRANSITIONS PANE (F14b+)
    ============================================================ */

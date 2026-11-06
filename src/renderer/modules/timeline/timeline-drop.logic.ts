@@ -113,7 +113,8 @@ export function buildClipFromAsset(asset: MediaAsset, startSec: number): Clip {
     colorToken: pickClipColor(asset.name),
     transform: DEFAULT_CLIP_TRANSFORM,
     color: DEFAULT_CLIP_COLOR,
-    audio: DEFAULT_CLIP_AUDIO, 
+    audio: DEFAULT_CLIP_AUDIO,
+    effects: [],
   };
 
   if (kind === "audio") {

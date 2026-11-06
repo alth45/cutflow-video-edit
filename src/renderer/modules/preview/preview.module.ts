@@ -9,7 +9,7 @@ import { createPlaybackTicker } from "./playback.ticker";
 import { formatTimecode } from "./playback.logic";
 import {
   getActiveClipsAtTime,
-  getTransitionSample, // ← TAMBAH
+  getTransitionSample,
   sequenceHasAnyClip,
   isClipActiveAt,
   type ActiveClipInfo,
@@ -32,6 +32,10 @@ import { getClipById } from "@state/selectors";
 import { pixelDeltaToPosition, clampPosition } from "./overlay-drag.logic";
 import * as actions from "@state/actions";
 import { on } from "@core/Dom";
+import {
+  buildFilterString,
+  getVignetteStrength,
+} from "@modules/effects/effect.logic";
 /* ============================================================
    PREVIEW MODULE — ENTRY
    ============================================================ */
@@ -597,7 +601,21 @@ function applyVisualTransform(
   if (c.exposure !== 0) filters.push(`brightness(${1 + c.exposure / 200})`);
   if (c.contrast !== 0) filters.push(`contrast(${1 + c.contrast / 200})`);
   if (c.saturation !== 100) filters.push(`saturate(${c.saturation / 100})`);
-  wrapper.style.filter = filters.join(" ");
+  /* ---- Color correction + effects ---- */
+  wrapper.style.filter = buildFilterString(clip);
+
+  /* Vignette overlay */
+  const vignetteStrength = getVignetteStrength(clip);
+  if (vignetteStrength !== null) {
+    wrapper.classList.add("has-vignette");
+    wrapper.style.setProperty(
+      "--vignette-color",
+      `rgba(0, 0, 0, ${(vignetteStrength * 0.9).toFixed(2)})`,
+    );
+  } else {
+    wrapper.classList.remove("has-vignette");
+    wrapper.style.removeProperty("--vignette-color");
+  }
 
   /* ---- Temperature overlay ---- */
   let overlay = wrapper.querySelector<HTMLElement>(".preview-color-overlay");

@@ -102,6 +102,7 @@ export function parseProject(json: string): ParseProjectResult {
             patched["transform"] = DEFAULT_CLIP_TRANSFORM;
           if (!patched["color"]) patched["color"] = DEFAULT_CLIP_COLOR;
           if (!patched["audio"]) patched["audio"] = DEFAULT_CLIP_AUDIO;
+          if (!patched["effects"]) patched["effects"] = [];
 
           /* Text clip backward compat: normalize missing style. */
           const source = patched["source"];

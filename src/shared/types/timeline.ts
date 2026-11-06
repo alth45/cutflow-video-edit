@@ -142,6 +142,31 @@ export const DEFAULT_CLIP_AUDIO: ClipAudio = Object.freeze({
 });
 
 /* ============================================================
+   CLIP EFFECT (F14aa)
+   ------------------------------------------------------------
+   Effect yang di-apply pada clip. Params fleksibel per-kind
+   (blur pakai 'amount' px, grayscale pakai 'amount' %, dst.).
+   ============================================================ */
+
+export type EffectKind =
+  | "blur"
+  | "grayscale"
+  | "sepia"
+  | "brightness"
+  | "contrast"
+  | "saturate"
+  | "hue-rotate"
+  | "invert"
+  | "vignette";
+
+export interface ClipEffect {
+  readonly id: string;
+  readonly kind: EffectKind;
+  readonly params: Readonly<Record<string, number>>;
+  readonly enabled: boolean;
+}
+
+/* ============================================================
    TEXT CLIP STYLE (F14z)
    ------------------------------------------------------------
    Styling untuk text clip. Semua via CSS di preview.
@@ -233,6 +258,7 @@ interface ClipBase {
   readonly transform: ClipTransform;
   readonly color: ClipColor;
   readonly audio: ClipAudio;
+  readonly effects: readonly ClipEffect[]; // ← TAMBAH
 }
 
 /**

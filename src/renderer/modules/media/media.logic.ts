@@ -13,15 +13,6 @@ export interface ListEntry {
   readonly gradientIndex: number;
 }
 
-export const EFFECTS: readonly ListEntry[] = [
-  { name: "Color Balance", sub: "Color Correction", gradientIndex: 4 },
-  { name: "Gaussian Blur", sub: "Blur & Sharpen", gradientIndex: 2 },
-  { name: "Lumetri Look", sub: "Color Correction", gradientIndex: 5 },
-  { name: "Glow", sub: "Stylize", gradientIndex: 1 },
-  { name: "Warp Stabilizer", sub: "Distort", gradientIndex: 6 },
-  { name: "Film Grain", sub: "Texture", gradientIndex: 8 },
-];
-
 export const TRANSITIONS: readonly ListEntry[] = [
   { name: "Cross Dissolve", sub: "0.5s · default", gradientIndex: 3 },
   { name: "Dip to Black", sub: "0.5s", gradientIndex: 2 },
@@ -83,10 +74,10 @@ export function formatDurationBadge(seconds: number | null): string | null {
  * Filter built-in entries (EFFECTS atau TRANSITIONS) by name/sub
  * substring. Empty query = semua.
  */
-export function filterListEntries(
-  entries: readonly ListEntry[],
+export function filterListEntries<T extends ListEntry>(
+  entries: readonly T[],
   query: string,
-): ListEntry[] {
+): T[] {
   const q = query.trim().toLowerCase();
   if (!q) return [...entries];
   return entries.filter(

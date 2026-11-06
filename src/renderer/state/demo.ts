@@ -6,6 +6,7 @@ import {
   DEFAULT_CLIP_TRANSFORM,
   DEFAULT_CLIP_COLOR,
   DEFAULT_CLIP_AUDIO,
+  DEFAULT_TEXT_STYLE, // ← TAMBAH
 } from "@shared/types/timeline"; /* ============================================================
    DEMO SEEDING (DEV ONLY)
    ------------------------------------------------------------
@@ -208,6 +209,7 @@ function buildClip(
     transform: DEFAULT_CLIP_TRANSFORM,
     color: DEFAULT_CLIP_COLOR,
     audio: DEFAULT_CLIP_AUDIO,
+    effects: [],
   };
 
   switch (spec.kind) {
@@ -215,7 +217,11 @@ function buildClip(
       return {
         ...common,
         kind: "text",
-        source: { kind: "text", content: spec.textContent ?? spec.name },
+        source: {
+          kind: "text",
+          content: spec.textContent ?? spec.name,
+          style: DEFAULT_TEXT_STYLE,
+        },
       };
     case "video": {
       const mediaId = spec.mediaName
