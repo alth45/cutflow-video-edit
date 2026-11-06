@@ -38,7 +38,7 @@ import { getTransitionById } from "@state/selectors";
 import { openTextEditor } from "./text-editor.module";
 import { getClipById } from "@state/selectors";
 import { openTransitionKindMenu } from "./transition-kind-menu";
-
+import { DEFAULT_TEXT_STYLE } from "@shared/types/timeline";
 /* Threshold gerakan minimum (px) sebelum drag dianggap mulai —
    membedakan click (select only) dari drag (move). */
 const DRAG_THRESHOLD_PX = 3;
@@ -1126,15 +1126,14 @@ async function handleTextClipDblClick(
 
   const result = await openTextEditor({
     initialValue: clip.source.content,
+    initialStyle: clip.source.style ?? DEFAULT_TEXT_STYLE,
     title: "Edit text clip",
     placeholder: "Enter text…",
   });
 
-  if (result === null) return; // cancelled
+  if (result === null) return;
 
-  actions.updateTextClipContent(clipId, result);
+  actions.updateTextClip(clipId, result.content, result.style);
 
-  /* Focus kembali ke timeline setelah modal close supaya
-     keyboard shortcuts berfungsi (Escape, Space, dll.). */
   view.tlScroll.focus();
 }

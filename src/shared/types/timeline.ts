@@ -140,6 +140,32 @@ export const DEFAULT_CLIP_AUDIO: ClipAudio = Object.freeze({
   fadeInSec: 0,
   fadeOutSec: 0,
 });
+
+/* ============================================================
+   TEXT CLIP STYLE (F14z)
+   ------------------------------------------------------------
+   Styling untuk text clip. Semua via CSS di preview.
+   ============================================================ */
+export interface TextClipStyle {
+  readonly fontFamily: string;
+  readonly fontWeight: 400 | 700;
+  readonly fontStyle: "normal" | "italic";
+  readonly underline: boolean;
+  readonly stroke: boolean;
+  readonly strokeWidth: number; // px, 0.5-6
+  readonly outlineOnly: boolean; // jika true: no fill, hanya stroke
+}
+
+export const DEFAULT_TEXT_STYLE: TextClipStyle = Object.freeze({
+  fontFamily: "Inter, system-ui, sans-serif",
+  fontWeight: 700,
+  fontStyle: "normal",
+  underline: false,
+  stroke: false,
+  strokeWidth: 2,
+  outlineOnly: false,
+});
+
 /** Clip yang sumbernya file media. */
 export interface MediaClipSource {
   readonly kind: "media";
@@ -182,6 +208,7 @@ export interface TextClipSource {
   readonly kind: "text";
   /** Isi teks yang ditampilkan. */
   readonly content: string;
+  readonly style: TextClipStyle;
 }
 
 export type ClipSource = MediaClipSource | TextClipSource;

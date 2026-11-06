@@ -10,6 +10,7 @@ import {
   DEFAULT_CLIP_TRANSFORM,
   DEFAULT_CLIP_COLOR,
   DEFAULT_CLIP_AUDIO,
+  DEFAULT_TEXT_STYLE,
 } from "@shared/types/timeline";
 import type {
   Clip,
@@ -22,6 +23,7 @@ import type {
   ClipTransform,
   ClipColor,
   ClipAudio,
+  TextClipStyle,
 } from "@shared/types/timeline";
 import type {
   AppState,
@@ -1588,7 +1590,7 @@ export function addTextClip(trackId: string, startSec: number): void {
       transform: DEFAULT_CLIP_TRANSFORM,
       color: DEFAULT_CLIP_COLOR,
       audio: DEFAULT_CLIP_AUDIO,
-      source: { kind: "text", content: "Text" },
+      source: { kind: "text", content: "Text", style: DEFAULT_TEXT_STYLE },
     };
 
     const nextTrack = { ...track, clips: [...track.clips, textClip] };
@@ -1621,7 +1623,11 @@ export function addTextClip(trackId: string, startSec: number): void {
  * Reject empty content (caller harus handle — user bisa cancel
  * atau hapus clip via Delete kalau mau kosong).
  */
-export function updateTextClipContent(clipId: string, content: string): void {
+export function updateTextClip(
+  clipId: string,
+  content: string,
+  style: TextClipStyle,
+): void {
   const trimmed = content.trim();
   if (!trimmed) return;
 
@@ -1634,14 +1640,18 @@ export function updateTextClipContent(clipId: string, content: string): void {
 
       const clip = track.clips[idx];
       if (!clip || clip.kind !== "text") return state;
-      if (clip.source.content === trimmed) return state;
+
+      const prevStyle = clip.source.style ?? DEFAULT_TEXT_STYLE;
+      const styleChanged = JSON.stringify(prevStyle) !== JSON.stringify(style);
+      const contentChanged = clip.source.content !== trimmed;
+      if (!contentChanged && !styleChanged) return state;
 
       const displayName = trimmed.replace(/\s+/g, " ").slice(0, 80) || "Text";
 
       const nextClip: TextClip = {
         ...clip,
         name: displayName,
-        source: { kind: "text", content: trimmed },
+        source: { kind: "text", content: trimmed, style },
       };
 
       const nextClips = [...track.clips];

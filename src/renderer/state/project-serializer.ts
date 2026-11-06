@@ -4,6 +4,7 @@ import {
   DEFAULT_CLIP_TRANSFORM,
   DEFAULT_CLIP_COLOR,
   DEFAULT_CLIP_AUDIO,
+  DEFAULT_TEXT_STYLE,
 } from "@shared/types/timeline";
 
 /* ============================================================
@@ -101,6 +102,20 @@ export function parseProject(json: string): ParseProjectResult {
             patched["transform"] = DEFAULT_CLIP_TRANSFORM;
           if (!patched["color"]) patched["color"] = DEFAULT_CLIP_COLOR;
           if (!patched["audio"]) patched["audio"] = DEFAULT_CLIP_AUDIO;
+
+          /* Text clip backward compat: normalize missing style. */
+          const source = patched["source"];
+          if (
+            source &&
+            typeof source === "object" &&
+            (source as Record<string, unknown>)["kind"] === "text"
+          ) {
+            const src = source as Record<string, unknown>;
+            if (!src["style"]) {
+              patched["source"] = { ...src, style: DEFAULT_TEXT_STYLE };
+            }
+          }
+
           return patched;
         })
       : clipsRaw;

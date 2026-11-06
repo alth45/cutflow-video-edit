@@ -34,6 +34,11 @@ import {
   Moon,
   ArrowRight,
   MoveHorizontal,
+  Bold,
+  Italic,
+  Underline,
+  Square,
+  Circle,
   createElement,
   type IconNode,
 } from "lucide";
@@ -96,6 +101,12 @@ const ICONS = {
   moon: Moon,
   "arrow-right": ArrowRight,
   "move-horizontal": MoveHorizontal,
+  /* Text style */
+  bold: Bold, // ← TAMBAH
+  italic: Italic, // ← TAMBAH
+  underline: Underline, // ← TAMBAH
+  stroke: Square, // ← TAMBAH (outlined box = stroke)
+  outline: Circle, // ← TAMBAH (empty ring = outline only)
   /* Feedback */
   info: Info,
   check: Check,

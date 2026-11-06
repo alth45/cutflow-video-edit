@@ -18,13 +18,14 @@ import {
   DEFAULT_CLIP_TRANSFORM,
   DEFAULT_CLIP_COLOR,
   DEFAULT_CLIP_AUDIO,
+  DEFAULT_TEXT_STYLE,
 } from "@shared/types/timeline";
-
 import type {
   Clip,
   ClipTransform,
   ClipColor,
   ClipAudio,
+  TextClipStyle,
 } from "@shared/types/timeline";
 
 import { getClipById } from "@state/selectors";
@@ -222,6 +223,9 @@ function createClipVisual(
       textEl.className = "preview-text";
       textEl.textContent =
         clip.source.kind === "text" ? clip.source.content : "";
+      if (clip.source.kind === "text") {
+        applyTextClipStyle(textEl, clip.source.style ?? DEFAULT_TEXT_STYLE);
+      }
       content.append(textEl);
       wrapper.append(content);
       const sample = getTransitionSample(
@@ -390,6 +394,7 @@ function updateClipVisual(
         if (textEl.textContent !== clip.source.content) {
           textEl.textContent = clip.source.content;
         }
+        applyTextClipStyle(textEl, clip.source.style ?? DEFAULT_TEXT_STYLE);
       }
       return;
     }
@@ -612,6 +617,37 @@ function applyVisualTransform(
     overlay.style.display = "block";
   } else {
     overlay.style.display = "none";
+  }
+}
+
+/* ============================================================
+   TEXT CLIP STYLE (F14z)
+   ============================================================ */
+
+function applyTextClipStyle(el: HTMLElement, style: TextClipStyle): void {
+  el.style.fontFamily = style.fontFamily;
+  el.style.fontWeight = String(style.fontWeight);
+  el.style.fontStyle = style.fontStyle;
+  el.style.textDecoration = style.underline ? "underline" : "none";
+
+  if (style.stroke) {
+    el.style.setProperty(
+      "-webkit-text-stroke",
+      `${style.strokeWidth}px rgba(255, 255, 255, 0.9)`,
+    );
+    if (style.outlineOnly) {
+      el.style.setProperty("-webkit-text-fill-color", "transparent");
+      el.style.color = "transparent";
+    } else {
+      el.style.setProperty("-webkit-text-fill-color", "");
+      el.style.color = "#fff";
+    }
+    el.style.textShadow = "none";
+  } else {
+    el.style.setProperty("-webkit-text-stroke", "");
+    el.style.setProperty("-webkit-text-fill-color", "");
+    el.style.color = "#fff";
+    el.style.textShadow = "0 2px 8px rgba(0,0,0,.85), 0 1px 2px rgba(0,0,0,.9)";
   }
 }
 
