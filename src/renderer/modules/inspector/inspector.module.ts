@@ -115,8 +115,13 @@ function syncClipPropertiesFromClip(view: InspectorView, clip: Clip): void {
   }
 
   for (const [button, ref] of view.switches) {
-    if (!ref.def.transformKey) continue;
-    const on = Boolean(transform[ref.def.transformKey]);
+    let on: boolean | null = null;
+    if (ref.def.transformKey) {
+      on = Boolean(transform[ref.def.transformKey]);
+    } else if (ref.def.audioKey) {
+      on = Boolean(audio[ref.def.audioKey]);
+    }
+    if (on === null) continue;
     if (button.classList.contains("on") !== on) {
       button.classList.toggle("on", on);
       button.setAttribute("aria-pressed", String(on));

@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "electron-updater": "^6.3.9",
+    "knip": "^6.44.1",
     "lucide": "^1.68.0"
   },
   "devDependencies": {

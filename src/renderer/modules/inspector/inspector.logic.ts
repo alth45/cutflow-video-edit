@@ -59,6 +59,7 @@ export interface SwitchRow {
   readonly label: string;
   readonly defaultOn: boolean;
   readonly transformKey?: keyof ClipTransform;
+  readonly audioKey?: keyof ClipAudio;
   readonly disabled?: boolean;
 }
 
@@ -222,7 +223,22 @@ export const INSPECTOR_TABS: readonly TabDef[] = [
             max: 100,
             defaultValue: 0,
             format: fmt.pan,
-            disabled: true,
+            audioKey: "pan",
+          },
+          {
+            kind: "slider",
+            label: "Boost",
+            min: 0,
+            max: 12,
+            defaultValue: 0,
+            format: fmt.db,
+            audioKey: "boostDb",
+          },
+          {
+            kind: "switch",
+            label: "Mute clip",
+            defaultOn: false,
+            audioKey: "muted",
           },
         ],
       },

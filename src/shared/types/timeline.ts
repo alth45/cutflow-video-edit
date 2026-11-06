@@ -128,10 +128,12 @@ export const DEFAULT_CLIP_COLOR: ClipColor = Object.freeze({
    tidak dipakai.
    ============================================================ */
 export interface ClipAudio {
-  readonly volume: number; // 0..100 (100 = full)
+  readonly volume: number; // 0..100
   readonly muted: boolean;
-  readonly fadeInSec: number; // 0..3 (detik)
-  readonly fadeOutSec: number; // 0..3 (detik)
+  readonly fadeInSec: number; // 0..3
+  readonly fadeOutSec: number; // 0..3
+  readonly pan: number; // -100..100 (L..R)
+  readonly boostDb: number; // 0..12 (gain boost)
 }
 
 export const DEFAULT_CLIP_AUDIO: ClipAudio = Object.freeze({
@@ -139,6 +141,8 @@ export const DEFAULT_CLIP_AUDIO: ClipAudio = Object.freeze({
   muted: false,
   fadeInSec: 0,
   fadeOutSec: 0,
+  pan: 0,
+  boostDb: 0,
 });
 
 /* ============================================================

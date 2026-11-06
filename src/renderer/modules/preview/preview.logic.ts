@@ -30,12 +30,17 @@ export interface ActiveClipInfo {
 
 export interface TransitionSample {
   readonly opacity: number;
+  readonly volume: number;
   readonly layer: "source" | "target" | "none";
   /** Persen offset horizontal (−100..100). Untuk slide. */
   readonly translateX?: number;
 }
 
-const NO_TRANSITION: TransitionSample = { opacity: 1, layer: "none" };
+const NO_TRANSITION: TransitionSample = {
+  opacity: 1,
+  volume: 1,
+  layer: "none",
+};
 
 /**
  * Cek apakah clip aktif di `timeSec`. Aktif jika:
@@ -103,13 +108,21 @@ export function getTransitionSample(
            second half afterClip fades from black. */
         if (tr.beforeClipId === clipId) {
           if (progress < 0.5)
-            return { opacity: 1 - progress * 2, layer: "target" };
-          return { opacity: 0, layer: "target" };
+            return {
+              opacity: 1 - progress * 2,
+              volume: 1 - progress,
+              layer: "target",
+            };
+          return { opacity: 0, volume: progress, layer: "target" };
         }
         if (tr.afterClipId === clipId) {
           if (progress >= 0.5)
-            return { opacity: (progress - 0.5) * 2, layer: "target" };
-          return { opacity: 0, layer: "target" };
+            return {
+              opacity: (progress - 0.5) * 2,
+              volume: 1 - progress,
+              layer: "target",
+            };
+          return { opacity: 0, volume: progress, layer: "target" };
         }
       }
 
@@ -134,10 +147,10 @@ export function getTransitionSample(
 
       /* Default (cross-dissolve & fallback): symmetric fade. */
       if (tr.beforeClipId === clipId) {
-        return { opacity: 1 - progress, layer: "source" };
+        return { opacity: 1 - progress, volume: 1 - progress, layer: "source" };
       }
       if (tr.afterClipId === clipId) {
-        return { opacity: progress, layer: "target" };
+        return { opacity: progress, volume: progress, layer: "target" };
       }
     }
   }

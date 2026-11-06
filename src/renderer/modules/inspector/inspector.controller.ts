@@ -8,6 +8,7 @@ import type { InspectorPanelTab } from "@shared/types/state";
 import {
   DEFAULT_CLIP_TRANSFORM,
   DEFAULT_CLIP_COLOR,
+  DEFAULT_CLIP_AUDIO,
 } from "@shared/types/timeline";
 export function attachInspectorController(view: InspectorView): () => void {
   const cleanups: Array<() => void> = [];
@@ -91,6 +92,17 @@ export function attachInspectorController(view: InspectorView): () => void {
           ref.def.transformKey,
           !current,
         );
+        return;
+      }
+
+      if (ref.def.audioKey) {
+        const state = appStore.getState();
+        const activeId = state.selection.selectedClipIds[0];
+        if (!activeId) return;
+        const clip = getClipById(state, activeId);
+        if (!clip) return;
+        const current = (clip.audio ?? DEFAULT_CLIP_AUDIO)[ref.def.audioKey];
+        actions.setClipAudioProperty(activeId, ref.def.audioKey, !current);
         return;
       }
 

@@ -130,8 +130,16 @@ export function updateClipInactive(
   view: InspectorView,
   activeClip: Clip | undefined,
 ): void {
-  const isActive = activeClip !== undefined && activeClip.kind !== "audio";
-  view.panelBody.classList.toggle("clip-inactive", !isActive);
+  const kind = activeClip?.kind;
+
+  /* Relevance per tab berdasarkan clip kind. */
+  const videoActive = kind === "video" || kind === "text";
+  const audioActive = kind === "audio" || kind === "video";
+  const colorActive = kind === "video" || kind === "text";
+
+  view.panes.get("insp-video")?.classList.toggle("clip-inactive", !videoActive);
+  view.panes.get("insp-audio")?.classList.toggle("clip-inactive", !audioActive);
+  view.panes.get("insp-color")?.classList.toggle("clip-inactive", !colorActive);
 }
 
 /* ============================================================
@@ -279,9 +287,14 @@ function renderSwitchRow(
   });
   wrap.append(document.createTextNode(row.label));
 
-  const on = row.transformKey
-    ? Boolean(readTransformValue(activeClip, row.transformKey, row.defaultOn))
-    : row.defaultOn;
+  let on = row.defaultOn;
+  if (row.transformKey) {
+    on = Boolean(
+      readTransformValue(activeClip, row.transformKey, row.defaultOn),
+    );
+  } else if (row.audioKey) {
+    on = Boolean(readAudioValue(activeClip, row.audioKey, row.defaultOn));
+  }
 
   const sw = el("button", {
     className: `switch${on ? " on" : ""}`,

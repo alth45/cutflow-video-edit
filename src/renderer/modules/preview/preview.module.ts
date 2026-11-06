@@ -36,6 +36,7 @@ import {
   buildFilterString,
   getVignetteStrength,
 } from "@modules/effects/effect.logic";
+import { AudioEngine } from "./audio-engine";
 /* ============================================================
    PREVIEW MODULE — ENTRY
    ============================================================ */
@@ -52,6 +53,7 @@ export function mountPreview(container: HTMLElement): () => void {
   const videoCache = new Map<string, HTMLVideoElement>();
   const renderedClips = new Map<string, HTMLElement>();
   const audioCache = new Map<string, HTMLAudioElement>();
+  const audioEngine = new AudioEngine();
 
   const unsubscribe = appStore.subscribe((state, prev) => {
     /* Update timecode setiap frame */
@@ -89,14 +91,14 @@ export function mountPreview(container: HTMLElement): () => void {
       state.selection.selectedClipIds !== prev.selection.selectedClipIds;
 
     if (timeChanged || seqChanged || playStateChanged || selectionChanged) {
-      renderComposite(view, state, videoCache, renderedClips);
-      syncAudio(state, state.playback.playing, audioCache);
+      renderComposite(view, state, videoCache, renderedClips, audioEngine);
+      syncAudio(state, state.playback.playing, audioCache, audioEngine);
     }
   });
 
   /* Initial composite render (di F5 default state = kosong). */
-  renderComposite(view, initial, videoCache, renderedClips);
-  syncAudio(initial, false, audioCache);
+  renderComposite(view, initial, videoCache, renderedClips, audioEngine);
+  syncAudio(initial, false, audioCache, audioEngine);
   /* Attach overlay drag + selection outline sync. */
   const detachDrag = attachOverlayDrag(view);
   const detachResize = attachOverlayResize(view); // ← TAMBAH
@@ -123,6 +125,7 @@ export function mountPreview(container: HTMLElement): () => void {
     }
     audioCache.clear();
     renderedClips.clear();
+    audioEngine.dispose();
     container.replaceChildren();
   };
 }
@@ -140,6 +143,7 @@ function renderComposite(
   state: AppState,
   videoCache: Map<string, HTMLVideoElement>,
   renderedClips: Map<string, HTMLElement>,
+  audioEngine: AudioEngine,
 ): void {
   const composite = view.compositeLayer;
   const timeSec = state.playback.currentTimeSec;
@@ -157,6 +161,7 @@ function renderComposite(
       const video = videoCache.get(clipId);
       if (video) {
         video.pause();
+        audioEngine.detach(video);
         video.removeAttribute("src");
         video.load();
         videoCache.delete(clipId);
@@ -172,14 +177,14 @@ function renderComposite(
     let el = renderedClips.get(info.clip.id);
 
     if (!el) {
-      const created = createClipVisual(info, state, videoCache);
+      const created = createClipVisual(info, state, videoCache, audioEngine);
       if (!created) continue;
       composite.append(created);
       renderedClips.set(info.clip.id, created);
       el = created;
     }
 
-    updateClipVisual(el, info, playing, state);
+    updateClipVisual(el, info, playing, state, audioEngine);
   }
   /* Sync .selected class pada clip overlay aktif. */
   const activeSelectedId = state.selection.selectedClipIds[0] ?? null;
@@ -199,6 +204,7 @@ function createClipVisual(
   info: ActiveClipInfo,
   state: AppState,
   videoCache: Map<string, HTMLVideoElement>,
+  audioEngine: AudioEngine,
 ): HTMLElement | null {
   const { clip, visualType, localTimeSec } = info;
 
@@ -278,7 +284,7 @@ function createClipVisual(
 
       const video = document.createElement("video");
       video.src = mediaUrl(asset.path);
-      video.muted = true;
+      video.muted = false;
       video.playsInline = true;
       video.preload = "auto";
       video.currentTime = localTimeSec;
@@ -291,6 +297,7 @@ function createClipVisual(
       content.append(video);
       wrapper.append(content);
       videoCache.set(clip.id, video);
+      audioEngine.attach(video);
       applyVisualTransform(wrapper, clip);
       return wrapper;
     }
@@ -369,6 +376,7 @@ function updateClipVisual(
   info: ActiveClipInfo,
   playing: boolean,
   state: AppState,
+  audioEngine: AudioEngine,
 ): void {
   const { clip, track, visualType, localTimeSec } = info;
   const timeSec = state.playback.currentTimeSec;
@@ -383,12 +391,18 @@ function updateClipVisual(
   if (visualType === "video") {
     const video = el.querySelector<HTMLVideoElement>("video");
     if (video) {
-      const audio = clip.audio ?? DEFAULT_CLIP_AUDIO;
-      const muted = track.muted || audio.muted;
-      video.muted = muted;
-      video.volume = muted
-        ? 0
-        : computeClipVolume(clip, localTimeSec) * sample.opacity;
+      const clipAudio = clip.audio ?? DEFAULT_CLIP_AUDIO;
+      const muted = track.muted || clipAudio.muted;
+      const fadeMul =
+        computeClipVolume(clip, Math.max(0, localTimeSec)) * sample.volume;
+
+      audioEngine.setParams(video, {
+        volume: clipAudio.volume,
+        boostDb: clipAudio.boostDb,
+        pan: clipAudio.pan,
+        muted,
+        fadeMultiplier: fadeMul,
+      });
     }
   }
   switch (visualType) {
@@ -465,6 +479,7 @@ function syncAudio(
   state: AppState,
   playing: boolean,
   audioCache: Map<string, HTMLAudioElement>,
+  audioEngine: AudioEngine,
 ): void {
   const timeSec = state.playback.currentTimeSec;
   const activeAudioIds = new Set<string>();
@@ -490,19 +505,29 @@ function syncAudio(
         audio = document.createElement("audio");
         audio.src = mediaUrl(asset.path);
         audio.preload = "auto";
+        /* Neutralize element-level control (Web Audio handles it). */
+        audio.volume = 1;
+        audio.muted = false;
+        audioEngine.attach(audio);
         audioCache.set(clip.id, audio);
       }
 
       const clipAudio = clip.audio ?? DEFAULT_CLIP_AUDIO;
       const muted = track.muted || clipAudio.muted;
-      audio.muted = muted;
-
       const sample = getTransitionSample(state, clip.id, timeSec);
-      audio.volume = muted
-        ? 0
-        : computeClipVolume(clip, localTimeSec) * sample.opacity;
+      const fadeMul =
+        computeClipVolume(clip, Math.max(0, localTimeSec)) * sample.volume;
+
+      audioEngine.setParams(audio, {
+        volume: clipAudio.volume,
+        boostDb: clipAudio.boostDb,
+        pan: clipAudio.pan,
+        muted,
+        fadeMultiplier: fadeMul,
+      });
 
       if (playing) {
+        audioEngine.ensureRunning();
         if (Math.abs(audio.currentTime - localTimeSec) > 0.3) {
           audio.currentTime = localTimeSec;
         }
@@ -524,6 +549,7 @@ function syncAudio(
   for (const [clipId, audio] of audioCache) {
     if (!activeAudioIds.has(clipId)) {
       audio.pause();
+      audioEngine.detach(audio);
       audio.removeAttribute("src");
       audio.load();
       audioCache.delete(clipId);
