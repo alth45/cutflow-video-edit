@@ -27,6 +27,8 @@ export function mountMedia(container: HTMLElement): () => void {
       state.ui.media.searchQuery !== prev.ui.media.searchQuery;
     const assetsChanged =
       state.project.mediaAssets !== prev.project.mediaAssets;
+    const mediaSelectionChanged =
+      state.ui.media.selectedAssetIds !== prev.ui.media.selectedAssetIds;
 
     const activeClip = getActiveClip(state);
     const prevActiveClip = getActiveClip(prev);
@@ -44,8 +46,29 @@ export function mountMedia(container: HTMLElement): () => void {
 
     if (searchChanged || assetsChanged) {
       renderAllPanes(view, state);
+    } else if (mediaSelectionChanged) {
+      const selectedAssets = new Set(state.ui.media.selectedAssetIds);
+      renderMediaBin(
+        view.binContainer,
+        state.project.mediaAssets,
+        state.ui.media.searchQuery,
+        selectedAssets,
+      );
+      renderEffectsPane(
+        view.fxContainer,
+        state.project.mediaAssets,
+        state.ui.media.searchQuery,
+        getActiveClip(state),
+        selectedAssets,
+      );
+      renderTransitionsPane(
+        view.trContainer,
+        state.project.mediaAssets,
+        state.ui.media.searchQuery,
+        selectedAssets,
+      );
+      updateSelectionBar(view, state);
     } else if (selectionChanged || effectsChanged) {
-      /* Only fx pane needs refresh. */
       renderEffectsPane(
         view.fxContainer,
         state.project.mediaAssets,
@@ -81,7 +104,27 @@ function renderAllPanes(view: MediaView, state: AppState): void {
   const assets = state.project.mediaAssets;
   const query = state.ui.media.searchQuery;
   const activeClip = getActiveClip(state);
-  renderMediaBin(view.binContainer, assets, query);
-  renderEffectsPane(view.fxContainer, assets, query, activeClip);
-  renderTransitionsPane(view.trContainer, assets, query);
+  const selectedAssets = new Set(state.ui.media.selectedAssetIds);
+
+  renderMediaBin(view.binContainer, assets, query, selectedAssets);
+  renderEffectsPane(
+    view.fxContainer,
+    assets,
+    query,
+    activeClip,
+    selectedAssets,
+  );
+  renderTransitionsPane(view.trContainer, assets, query, selectedAssets);
+  updateSelectionBar(view, state);
+}
+
+function updateSelectionBar(view: MediaView, state: AppState): void {
+  const count = state.ui.media.selectedAssetIds.length;
+  if (count === 0) {
+    view.selectionBar.hidden = true;
+  } else {
+    view.selectionBar.hidden = false;
+    view.selectionCount.textContent =
+      count === 1 ? "1 item selected" : `${count} items selected`;
+  }
 }

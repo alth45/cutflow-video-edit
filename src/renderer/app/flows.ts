@@ -7,6 +7,7 @@ import { makeId } from "@utils/id";
 import type { MediaAsset, MediaAssetKind } from "@shared/types/project";
 import { probeMediaDuration } from "@modules/media/probe-duration.logic";
 import { mediaUrl, isDemoPath } from "@utils/media-url";
+import { countClipsUsingAssets } from "@state/selectors";
 /* ---------- helpers ---------- */
 
 function toast(
@@ -139,4 +140,31 @@ function detectMediaKind(fileName: string): MediaAssetKind | null {
   if (["png", "jpg", "jpeg", "webp", "gif", "bmp"].includes(ext))
     return "image";
   return null;
+}
+
+/* ---------- DELETE MEDIA ---------- */
+
+export async function deleteMediaAssetsFlow(
+  assetIds: readonly string[],
+): Promise<void> {
+  if (assetIds.length === 0) return;
+
+  const state = appStore.getState();
+  const affectedClips = countClipsUsingAssets(state, assetIds);
+
+  if (affectedClips > 0) {
+    const assetWord = assetIds.length === 1 ? "media asset" : "media assets";
+    const clipWord = affectedClips === 1 ? "clip" : "clips";
+    const message =
+      `Delete ${assetIds.length} ${assetWord}?\n\n` +
+      `${affectedClips} ${clipWord} using this media will also be removed.\n\n` +
+      `You can undo with Ctrl+Z.`;
+    if (!window.confirm(message)) return;
+  }
+
+  actions.deleteMediaAssetsBulk(assetIds);
+
+  const assetWord = assetIds.length === 1 ? "item" : "items";
+  const affected = affectedClips > 0 ? ` (+${affectedClips} clips)` : "";
+  toast(`Deleted ${assetIds.length} ${assetWord}${affected}`, "success");
 }

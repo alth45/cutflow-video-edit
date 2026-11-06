@@ -382,3 +382,89 @@
   border-radius: var(--radius-full);
   flex: none;
 }
+
+/* ============================================================
+   THUMBNAIL SELECTION (F14ac)
+   ============================================================ */
+.thumb.selected .thumb-img {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 4px 16px rgba(124, 92, 255, 0.35);
+}
+
+.thumb.selected .thumb-name {
+  color: var(--text);
+}
+
+.thumb.selected .thumb-img::before {
+  content: "✓";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #fff;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  z-index: 5;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+/* ============================================================
+   MEDIA SELECTION BAR (F14ac)
+   ============================================================ */
+.media-selection-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 var(--space-5) var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  background: rgba(124, 92, 255, 0.12);
+  border: 1px solid rgba(124, 92, 255, 0.35);
+  border-radius: var(--radius);
+  font-size: var(--text-size-115);
+  animation: media-sel-bar-in var(--duration) ease-out;
+}
+
+.media-selection-bar[hidden] {
+  display: none;
+}
+
+.media-selection-count {
+  flex: 1;
+  color: #c4b6ff;
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.btn.small {
+  padding: var(--space-1) var(--space-4);
+  font-size: var(--text-size-110);
+  border-radius: var(--radius-xs);
+}
+
+.btn.small.danger {
+  background: rgba(255, 77, 109, 0.15);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn.small.danger:hover {
+  background: rgba(255, 77, 109, 0.25);
+  color: var(--danger);
+}
+
+@keyframes media-sel-bar-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}

@@ -25,13 +25,15 @@ import type { Clip } from "@shared/types/timeline";
    dipanggil terpisah oleh module. Ini penting: subscriber bisa
    update bin saja tanpa sentuh struktur/input focus.
    ============================================================ */
-
 export interface MediaView {
   readonly root: HTMLElement;
   readonly tabButtons: ReadonlyMap<MediaPanelTab, HTMLButtonElement>;
   readonly panes: ReadonlyMap<MediaPanelTab, HTMLElement>;
   readonly searchInput: HTMLInputElement;
   readonly importButton: HTMLButtonElement;
+  readonly selectionBar: HTMLElement; // ← TAMBAH
+  readonly selectionCount: HTMLElement; // ← TAMBAH
+  readonly deleteSelectionBtn: HTMLButtonElement; // ← TAMBAH
   readonly binContainer: HTMLElement;
   readonly fxContainer: HTMLElement;
   readonly trContainer: HTMLElement;
@@ -75,6 +77,20 @@ export function renderMediaView(state: AppState): MediaView {
   });
   searchInput.value = state.ui.media.searchQuery;
 
+  /* ---- Selection bar (hidden by default) ---- */
+  const selectionBar = el("div", { className: "media-selection-bar" });
+  selectionBar.hidden = true;
+
+  const selectionCount = el("span", { className: "media-selection-count" });
+
+  const deleteSelectionBtn = el("button", {
+    className: "btn small danger",
+    text: "Delete",
+  });
+  deleteSelectionBtn.type = "button";
+
+  selectionBar.append(selectionCount, deleteSelectionBtn);
+
   const importButton = el("button", {
     className: "icon-btn",
     attrs: { title: "Import" },
@@ -115,7 +131,7 @@ export function renderMediaView(state: AppState): MediaView {
     pane.hidden = id !== state.ui.media.activeTab;
   });
 
-  root.append(head, search, body);
+  root.append(head, search, selectionBar, body);
 
   return {
     root,
@@ -123,6 +139,9 @@ export function renderMediaView(state: AppState): MediaView {
     panes,
     searchInput,
     importButton,
+    selectionBar, // ← TAMBAH
+    selectionCount, // ← TAMBAH
+    deleteSelectionBtn, // ← TAMBAH
     binContainer,
     fxContainer,
     trContainer,
@@ -137,6 +156,7 @@ export function renderMediaBin(
   container: HTMLElement,
   assets: readonly MediaAsset[],
   query: string,
+  selectedIds: ReadonlySet<string>,
 ): void {
   clear(container);
   const filtered = filterMediaAssets(assets, query);
@@ -157,13 +177,13 @@ export function renderMediaBin(
   if (videoAssets.length > 0) {
     container.append(
       renderBinLabel("Footage", videoAssets.length),
-      renderThumbsGrid(videoAssets),
+      renderThumbsGrid(videoAssets, selectedIds),
     );
   }
   if (audioAssets.length > 0) {
     container.append(
       renderBinLabel("Audio", audioAssets.length),
-      renderThumbsGrid(audioAssets),
+      renderThumbsGrid(audioAssets, selectedIds),
     );
   }
 }
@@ -177,15 +197,20 @@ export function renderBinLabel(label: string, count: number): HTMLElement {
   return wrap;
 }
 
-export function renderThumbsGrid(assets: readonly MediaAsset[]): HTMLElement {
+function renderThumbsGrid(
+  assets: readonly MediaAsset[],
+  selectedIds: ReadonlySet<string> = new Set(),
+): HTMLElement {
   const grid = el("div", { className: "thumbs" });
-  for (const asset of assets) grid.append(renderThumb(asset));
+  for (const asset of assets) {
+    grid.append(renderThumb(asset, selectedIds.has(asset.id)));
+  }
   return grid;
 }
 
-function renderThumb(asset: MediaAsset): HTMLElement {
+function renderThumb(asset: MediaAsset, isSelected: boolean): HTMLElement {
   const thumb = el("div", {
-    className: "thumb",
+    className: `thumb${isSelected ? " selected" : ""}`,
     attrs: { draggable: "true" },
   });
   thumb.dataset["assetId"] = asset.id;
@@ -286,6 +311,7 @@ export function renderEffectsPane(
   assets: readonly MediaAsset[],
   query: string,
   activeClip: Clip | undefined,
+  selectedIds: ReadonlySet<string> = new Set(),
 ): void {
   clear(container);
 
@@ -319,7 +345,7 @@ export function renderEffectsPane(
 
   if (importedMatches) {
     container.append(renderBinLabel("Imported", filteredImages.length));
-    container.append(renderThumbsGrid(filteredImages));
+    container.append(renderThumbsGrid(filteredImages, selectedIds));
   }
 }
 
@@ -355,6 +381,7 @@ export function renderTransitionsPane(
   container: HTMLElement,
   assets: readonly MediaAsset[],
   query: string,
+  selectedIds: ReadonlySet<string> = new Set(),
 ): void {
   clear(container);
 
@@ -379,7 +406,7 @@ export function renderTransitionsPane(
 
   if (importedMatches) {
     container.append(renderBinLabel("Imported", filteredVideos.length));
-    container.append(renderThumbsGrid(filteredVideos));
+    container.append(renderThumbsGrid(filteredVideos, selectedIds));
   }
 }
 

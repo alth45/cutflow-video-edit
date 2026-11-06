@@ -75,6 +75,7 @@ export function createInitialState(): AppState {
       media: {
         activeTab: "media-bin",
         searchQuery: "",
+        selectedAssetIds: [], 
       },
       inspector: {
         activeTab: "insp-video",

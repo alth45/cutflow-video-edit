@@ -329,11 +329,12 @@ export function goToEnd(): void {
 /** Select satu clip (menggantikan selection sebelumnya). */
 export function selectClip(clipId: string): void {
   appStore.setState((state) => {
-    const isSame =
+    const sameSelection =
       state.selection.selectedClipIds.length === 1 &&
       state.selection.selectedClipIds[0] === clipId &&
-      state.selection.selectedTransitionId === null;
-    if (isSame) return state;
+      state.selection.selectedTransitionId === null &&
+      state.ui.media.selectedAssetIds.length === 0;
+    if (sameSelection) return state;
 
     return {
       ...state,
@@ -342,10 +343,13 @@ export function selectClip(clipId: string): void {
         selectedClipIds: [clipId],
         selectedTransitionId: null,
       },
+      ui: {
+        ...state.ui,
+        media: { ...state.ui.media, selectedAssetIds: [] },
+      },
     };
   });
 }
-
 /** Toggle clip di selection (Ctrl+click / Shift+click pattern). */
 export function toggleClipSelection(clipId: string): void {
   appStore.setState((state) => {
@@ -365,7 +369,8 @@ export function clearSelection(): void {
   appStore.setState((state) => {
     if (
       state.selection.selectedClipIds.length === 0 &&
-      state.selection.selectedTransitionId === null
+      state.selection.selectedTransitionId === null &&
+      state.ui.media.selectedAssetIds.length === 0
     )
       return state;
     return {
@@ -375,6 +380,7 @@ export function clearSelection(): void {
         selectedClipIds: [],
         selectedTransitionId: null,
       },
+      ui: { ...state.ui, media: { ...state.ui.media, selectedAssetIds: [] } },
     };
   });
 }
@@ -549,6 +555,7 @@ export function selectTransition(transitionId: string): void {
         selectedTransitionId: transitionId,
         selectedClipIds: [],
       },
+      ui: { ...state.ui, media: { ...state.ui.media, selectedAssetIds: [] } },
     };
   });
 }
@@ -775,7 +782,8 @@ export function setSelectedClips(ids: readonly string[]): void {
     if (ids.length === 0) {
       if (
         state.selection.selectedClipIds.length === 0 &&
-        state.selection.selectedTransitionId === null
+        state.selection.selectedTransitionId === null &&
+        state.ui.media.selectedAssetIds.length === 0
       )
         return state;
       return {
@@ -785,6 +793,7 @@ export function setSelectedClips(ids: readonly string[]): void {
           selectedClipIds: [],
           selectedTransitionId: null,
         },
+        ui: { ...state.ui, media: { ...state.ui.media, selectedAssetIds: [] } },
       };
     }
 
@@ -797,11 +806,8 @@ export function setSelectedClips(ids: readonly string[]): void {
 
     const next = Array.from(validIds);
     const prev = state.selection.selectedClipIds;
-
-    /* No-op jika set identik. */
-    if (next.length === prev.length && next.every((id) => prev.includes(id))) {
+    if (next.length === prev.length && next.every((id) => prev.includes(id)))
       return state;
-    }
 
     return {
       ...state,
@@ -810,6 +816,7 @@ export function setSelectedClips(ids: readonly string[]): void {
         selectedClipIds: next,
         selectedTransitionId: null,
       },
+      ui: { ...state.ui, media: { ...state.ui.media, selectedAssetIds: [] } },
     };
   });
 }
@@ -1598,6 +1605,143 @@ export function addMediaAssetsBulk(assets: readonly MediaAsset[]): void {
       ...state.project,
       mediaAssets: [...state.project.mediaAssets, ...filtered],
     });
+  });
+}
+
+/* ============================================================
+   MEDIA SELECTION (F14ac)
+   ------------------------------------------------------------
+   Selection state untuk thumbnail di bin. Mutual exclusive
+   dengan clip/transition selection (via selectClip, dll.).
+   ============================================================ */
+
+export function selectMediaAsset(assetId: string): void {
+  appStore.setState((state) => {
+    const same =
+      state.ui.media.selectedAssetIds.length === 1 &&
+      state.ui.media.selectedAssetIds[0] === assetId &&
+      state.selection.selectedClipIds.length === 0;
+    if (same) return state;
+
+    return {
+      ...state,
+      selection: {
+        ...state.selection,
+        selectedClipIds: [],
+        selectedTransitionId: null,
+      },
+      ui: {
+        ...state.ui,
+        media: { ...state.ui.media, selectedAssetIds: [assetId] },
+      },
+    };
+  });
+}
+
+export function toggleMediaAssetSelection(assetId: string): void {
+  appStore.setState((state) => {
+    const ids = state.ui.media.selectedAssetIds;
+    const next = ids.includes(assetId)
+      ? ids.filter((id) => id !== assetId)
+      : [...ids, assetId];
+
+    return {
+      ...state,
+      selection: {
+        ...state.selection,
+        selectedClipIds: [],
+        selectedTransitionId: null,
+      },
+      ui: {
+        ...state.ui,
+        media: { ...state.ui.media, selectedAssetIds: next },
+      },
+    };
+  });
+}
+
+export function clearMediaAssetSelection(): void {
+  appStore.setState((state) => {
+    if (state.ui.media.selectedAssetIds.length === 0) return state;
+    return {
+      ...state,
+      ui: {
+        ...state.ui,
+        media: { ...state.ui.media, selectedAssetIds: [] },
+      },
+    };
+  });
+}
+
+/**
+ * Hapus media asset(s) + cleanup clips yang mereferensikan + cleanup
+ * transitions yang involve clip tersebut. 1 history entry.
+ */
+export function deleteMediaAssetsBulk(ids: readonly string[]): void {
+  if (ids.length === 0) return;
+  const idSet = new Set(ids);
+
+  appStore.setState((state) => {
+    const nextAssets = state.project.mediaAssets.filter(
+      (a) => !idSet.has(a.id),
+    );
+    if (nextAssets.length === state.project.mediaAssets.length) return state;
+
+    const removedClipIds = new Set<string>();
+
+    const nextTracks = state.project.sequence.tracks.map((track) => {
+      const filteredClips = track.clips.filter((clip) => {
+        if (clip.source.kind !== "media") return true;
+        if (idSet.has(clip.source.mediaId)) {
+          removedClipIds.add(clip.id);
+          return false;
+        }
+        return true;
+      });
+
+      const filteredTransitions = track.transitions.filter(
+        (tr) =>
+          !removedClipIds.has(tr.beforeClipId) &&
+          !removedClipIds.has(tr.afterClipId),
+      );
+
+      if (
+        filteredClips.length === track.clips.length &&
+        filteredTransitions.length === track.transitions.length
+      )
+        return track;
+
+      return {
+        ...track,
+        clips: filteredClips,
+        transitions: filteredTransitions,
+      };
+    });
+
+    const nextProject = {
+      ...state.project,
+      mediaAssets: nextAssets,
+      sequence: { ...state.project.sequence, tracks: nextTracks },
+    };
+
+    return {
+      ...withProject(state, nextProject),
+      selection: {
+        ...state.selection,
+        selectedClipIds: state.selection.selectedClipIds.filter(
+          (id) => !removedClipIds.has(id),
+        ),
+      },
+      ui: {
+        ...state.ui,
+        media: {
+          ...state.ui.media,
+          selectedAssetIds: state.ui.media.selectedAssetIds.filter(
+            (id) => !idSet.has(id),
+          ),
+        },
+      },
+    };
   });
 }
 

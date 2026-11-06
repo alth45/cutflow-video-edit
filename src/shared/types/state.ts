@@ -62,52 +62,29 @@ export interface PlaybackState {
 
 /* ============================================================
    UI — MEDIA PANEL
-   ------------------------------------------------------------
-   Tab aktif = selector yang menentukan pane mana yang render.
-   Nilai string identik dengan `data-tab` di markup asli — jadi
-   tidak perlu mapping.
    ============================================================ */
-export type MediaPanelTab = "media-bin" | "media-fx" | "media-tr";
+export type MediaPanelTab = 'media-bin' | 'media-fx' | 'media-tr';
 
 export interface MediaPanelState {
   readonly activeTab: MediaPanelTab;
-  /** Query pencarian di input search. String kosong = tidak filter. */
   readonly searchQuery: string;
+  readonly selectedAssetIds: readonly string[];
 }
 
 /* ============================================================
    UI — INSPECTOR PANEL
-   ------------------------------------------------------------
-   `collapsedGroups` = daftar ID group yang ter-collapse.
-   Sengaja array (bukan Set) karena:
-   - Sederhana untuk serialize (tidak perlu konversi).
-   - Perbandingan via `.includes()` cukup (≤5 group).
-   - Mudah di-spread untuk immutable update:
-       collapsedGroups: [...prev, 'transform']
    ============================================================ */
-export type InspectorPanelTab = "insp-video" | "insp-audio" | "insp-color";
+export type InspectorPanelTab = 'insp-video' | 'insp-audio' | 'insp-color';
 
 export interface InspectorPanelState {
   readonly activeTab: InspectorPanelTab;
-  /** ID group accordion yang collapsed. Group yang tidak ada di sini = expanded. */
   readonly collapsedGroups: readonly string[];
 }
 
 /* ============================================================
    UI — TIMELINE VIEW
-   ------------------------------------------------------------
-   `zoom` = skala horizontal (1 = 100%, 3 = 300%).
-   `snapEnabled` = tombol magnet aktif.
-
-   CATATAN: `scrollX` TIDAK ada di sini.
-   - Scroll posisi dimiliki DOM (`element.scrollLeft`).
-   - Menyimpannya di state → butuh bidirectional sync
-     (state → DOM untuk restore, DOM → state untuk scroll).
-   - Untuk restore scroll saat re-mount, bisa pakai `scrollLeft`
-     DOM secara langsung (browser sudah menyimpannya).
-   - Kalau nanti butuh persist antar session, tambah saat itu.
    ============================================================ */
-export type TimelineTool = "pointer" | "razor" | "hand" | "text";
+export type TimelineTool = 'pointer' | 'razor' | 'hand' | 'text';
 
 export interface TimelineViewState {
   readonly zoom: number;
@@ -116,9 +93,7 @@ export interface TimelineViewState {
 }
 
 /* ============================================================
-   LAYOUT (F14v)
-   ------------------------------------------------------------
-   Visibility state untuk panel. Semua default = visible.
+   UI — LAYOUT (F14v)
    ============================================================ */
 export interface LayoutState {
   readonly mediaHidden: boolean;
@@ -129,12 +104,6 @@ export interface LayoutState {
 
 /* ============================================================
    UI — AGGREGATE
-   ------------------------------------------------------------
-   Semua ephemeral UI state per panel dalam satu slice `ui`.
-   Manfaat:
-   - Subscriber dapat filter perubahan se-level panel.
-   - Refactor mudah: tambah panel → tambah field di sini.
-   - Tidak ada "flat ui" yang jadi 20 field berserakan.
    ============================================================ */
 export interface UiState {
   readonly media: MediaPanelState;

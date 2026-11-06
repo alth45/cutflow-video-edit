@@ -8,6 +8,7 @@ import {
 } from "../../app/flows";
 import { SHORTCUTS, type ShortcutAction } from "./keyboard.logic";
 import { getClipById } from "@state/selectors";
+import { deleteMediaAssetsFlow } from "../../app/flows";
 
 /* ============================================================
    KEYBOARD MODULE
@@ -59,16 +60,20 @@ function dispatch(action: ShortcutAction): void {
     case "delete-clip": {
       const state = appStore.getState();
 
-      /* Transition selected → remove transition. */
+      /* Priority: transition → media assets → clips. */
       if (state.selection.selectedTransitionId) {
         actions.removeTransition(state.selection.selectedTransitionId);
         return;
       }
 
-      /* Clip selection → bulk delete. */
-      const selected = [...state.selection.selectedClipIds];
-      if (selected.length === 0) return;
-      actions.deleteClipsBulk(selected);
+      if (state.ui.media.selectedAssetIds.length > 0) {
+        void deleteMediaAssetsFlow(state.ui.media.selectedAssetIds);
+        return;
+      }
+
+      const selectedClips = [...state.selection.selectedClipIds];
+      if (selectedClips.length === 0) return;
+      actions.deleteClipsBulk(selectedClips);
       return;
     }
     case "undo":

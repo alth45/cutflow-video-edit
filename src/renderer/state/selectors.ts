@@ -316,3 +316,24 @@ export function getTransitionById(
   }
   return undefined;
 }
+
+/**
+ * Hitung berapa banyak clip yang menggunakan asset(s) tertentu.
+ * Return 0 kalau tidak ada.
+ */
+export function countClipsUsingAssets(
+  state: AppState,
+  assetIds: readonly string[],
+): number {
+  if (assetIds.length === 0) return 0;
+  const idSet = new Set(assetIds);
+  let count = 0;
+  for (const track of state.project.sequence.tracks) {
+    for (const clip of track.clips) {
+      if (clip.source.kind === "media" && idSet.has(clip.source.mediaId)) {
+        count++;
+      }
+    }
+  }
+  return count;
+}

@@ -4,6 +4,7 @@ import { appStore } from "@state/appStore";
 import type { MediaView } from "./media.view";
 import { eventBus } from "@core/events";
 import type { EffectKind } from "@shared/types/timeline";
+import { deleteMediaAssetsFlow } from "../../app/flows";
 
 export interface MediaControllerCallbacks {
   readonly onImportClick: () => void;
@@ -30,6 +31,43 @@ export function attachMediaController(
   cleanups.push(
     on(view.searchInput, "input", (ev) => {
       actions.setSearchQuery((ev.target as HTMLInputElement).value);
+    }),
+  );
+
+  /* ---- Click thumbnail → select / toggle ---- */
+  cleanups.push(
+    delegate(view.root, "click", ".thumb[data-asset-id]", (ev, thumb) => {
+      ev.stopPropagation();
+      const assetId = (thumb as HTMLElement).dataset["assetId"];
+      if (!assetId) return;
+
+      if (ev.ctrlKey || ev.metaKey) {
+        actions.toggleMediaAssetSelection(assetId);
+      } else {
+        actions.selectMediaAsset(assetId);
+      }
+    }),
+  );
+
+  /* ---- Delete button in selection bar ---- */
+  cleanups.push(
+    on(view.deleteSelectionBtn, "click", (ev) => {
+      ev.stopPropagation();
+      const ids = appStore.getState().ui.media.selectedAssetIds;
+      if (ids.length === 0) return;
+      void deleteMediaAssetsFlow(ids);
+    }),
+  );
+
+  /* ---- Click outside bin area → clear asset selection ---- */
+  cleanups.push(
+    on(document, "click", (ev) => {
+      const target = ev.target as Node;
+      if (view.root.contains(target)) return;
+      const state = appStore.getState();
+      if (state.ui.media.selectedAssetIds.length > 0) {
+        actions.clearMediaAssetSelection();
+      }
     }),
   );
 
