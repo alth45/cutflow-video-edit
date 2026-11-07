@@ -39,6 +39,12 @@ export const IpcChannel = Object.freeze({
   /* ===== MEDIA ===== */
   /** Buka file picker untuk memilih media file. */
   MEDIA_PICK_FILES: "media:pick-files",
+
+  /* ===== EXPORT ===== */
+  EXPORT_BEGIN: "export:begin",
+  EXPORT_CHUNK: "export:chunk",
+  EXPORT_FINISH: "export:finish",
+  EXPORT_CANCEL: "export:cancel",
 } as const);
 
 /* ============================================================

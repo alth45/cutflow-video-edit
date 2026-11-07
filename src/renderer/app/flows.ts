@@ -8,6 +8,9 @@ import type { MediaAsset, MediaAssetKind } from "@shared/types/project";
 import { probeMediaDuration } from "@modules/media/probe-duration.logic";
 import { mediaUrl, isDemoPath } from "@utils/media-url";
 import { countClipsUsingAssets } from "@state/selectors";
+
+import { openExportModal } from "@modules/export/export.modal";
+import { exportProject } from "@modules/export/export.service";
 /* ---------- helpers ---------- */
 
 function toast(
@@ -90,7 +93,10 @@ export async function importMediaFlow(): Promise<void> {
       /* Image: tidak ada durasi (null). Video/audio: probe. */
       let durationSec: number | null = null;
       if (kind !== "image") {
-        durationSec = await probeMediaDuration(mediaUrl(file.path));
+        durationSec = await probeMediaDuration(
+          mediaUrl(file.path),
+          kind === "audio" ? "audio" : "video",
+        );
       }
 
       return { file, kind, durationSec };
@@ -167,4 +173,33 @@ export async function deleteMediaAssetsFlow(
   const assetWord = assetIds.length === 1 ? "item" : "items";
   const affected = affectedClips > 0 ? ` (+${affectedClips} clips)` : "";
   toast(`Deleted ${assetIds.length} ${assetWord}${affected}`, "success");
+}
+
+/* ---------- EXPORT ---------- */
+
+export async function exportVideoFlow(): Promise<void> {
+  const state = appStore.getState();
+
+  const totalClips = state.project.sequence.tracks.reduce(
+    (sum, t) => sum + t.clips.length,
+    0,
+  );
+  if (totalClips === 0) {
+    toast("Nothing to export — timeline is empty", "warning");
+    return;
+  }
+
+  let modal: ReturnType<typeof openExportModal> | null = null;
+  try {
+    modal = openExportModal();
+    await exportProject(state, (pct) => modal?.updateProgress(pct));
+    toast("Export complete", "success");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message !== "Export canceled") {
+      toast(`Export failed: ${message}`, "error");
+    }
+  } finally {
+    modal?.close();
+  }
 }

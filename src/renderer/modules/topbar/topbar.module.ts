@@ -4,6 +4,7 @@ import {
   saveProjectFlow,
   openProjectFlow,
   importMediaFlow,
+  exportVideoFlow,
 } from "../../app/flows";
 import type { MenuActionId } from "./menu.logic";
 import * as actions from "@state/actions";
@@ -55,7 +56,7 @@ function handleAction(id: MenuActionId): void {
       return;
 
     case "file:export":
-      toast("Export video — coming soon", "info");
+      void exportVideoFlow();
       return;
 
     /* ---- EDIT ---- */

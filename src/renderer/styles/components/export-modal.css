@@ -1,0 +1,58 @@
+.export-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: grid;
+  place-items: center;
+  z-index: var(--z-modal);
+  animation: fadeIn var(--duration-fast) ease-out;
+}
+
+.export-modal {
+  width: min(400px, 90vw);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.export-modal-title {
+  font-size: var(--text-size-135);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+}
+
+.export-progress-wrap {
+  height: 8px;
+  background: var(--panel-3);
+  border-radius: 99px;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+}
+
+.export-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 0.2s linear;
+}
+
+.export-progress-text {
+  font-size: var(--text-size-125);
+  color: var(--accent-2);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.export-modal-hint {
+  font-size: var(--text-size-110);
+  color: var(--muted-2);
+  line-height: 1.5;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line-soft);
+}

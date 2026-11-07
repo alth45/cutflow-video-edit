@@ -91,6 +91,20 @@ export interface MediaFileInfo {
 }
 
 /* ============================================================
+   EXPORT
+   ============================================================ */
+export interface ExportApi {
+  /** Buka save dialog. Return path + ok. */
+  begin(): Promise<{ ok: boolean; path?: string }>;
+  /** Kirim chunk data ke main process untuk ditulis ke file. */
+  chunk(data: Uint8Array): void;
+  /** Finalisasi file (flush + close). */
+  finish(): Promise<{ ok: boolean; error?: string }>;
+  /** Batalkan export (close stream + delete partial file). */
+  cancel(): Promise<void>;
+}
+
+/* ============================================================
    ROOT API
    ------------------------------------------------------------
    Bentuk objek yang di-expose ke window.cutflow.
@@ -102,4 +116,6 @@ export interface CutFlowApi {
   readonly project: ProjectApi;
   /** Media file picker. */
   readonly media: MediaApi;
+
+  readonly export: ExportApi;
 }

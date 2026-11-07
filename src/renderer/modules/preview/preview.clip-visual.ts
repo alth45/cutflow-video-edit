@@ -61,7 +61,7 @@ export function createClipVisual(
         sample.translateX ?? 0,
       );
       wrapper.style.zIndex = String(
-        computeZIndex(state, info.track.id, sample.layer === "source"),
+        computeZIndex(state, info.track.id, sample.layer === "source", true),
       );
       return wrapper;
     }
@@ -212,7 +212,12 @@ export function updateClipVisual(
     sample.translateX ?? 0,
   );
   el.style.zIndex = String(
-    computeZIndex(state, track.id, sample.layer === "source"),
+    computeZIndex(
+      state,
+      track.id,
+      sample.layer === "source",
+      clip.kind === "text",
+    ),
   );
 
   /* Sync animation class on content */

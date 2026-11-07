@@ -6,7 +6,7 @@ import type {
   SaveProjectResult,
   PickFilesResult,
 } from "@shared/types/api";
-
+import type { ExportApi } from "@shared/types/api";
 /* ============================================================
    IPC CHANNELS
    ------------------------------------------------------------
@@ -85,6 +85,16 @@ async function pickMediaFiles(): Promise<PickFilesResult> {
     error: "Media picker belum diimplementasikan (Fase F13).",
   });
 }
+
+const exportApi: ExportApi = {
+  // ← TAMBAH
+  begin: () => invokeSafe(IpcChannel.EXPORT_BEGIN, { ok: false }),
+  chunk: (data) => ipcRenderer.send(IpcChannel.EXPORT_CHUNK, data),
+  finish: () =>
+    invokeSafe(IpcChannel.EXPORT_FINISH, { ok: false, error: "IPC failed" }),
+  cancel: () => invokeSafe(IpcChannel.EXPORT_CANCEL, undefined),
+};
+
 /* ============================================================
    EXPORT: ROOT API
    ------------------------------------------------------------
@@ -108,4 +118,6 @@ export const cutflowApi: CutFlowApi = Object.freeze({
   media: Object.freeze({
     pickFiles: pickMediaFiles,
   }),
+
+  export: Object.freeze(exportApi),
 });

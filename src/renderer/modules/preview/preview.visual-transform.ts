@@ -104,6 +104,14 @@ export function applyTextClipStyle(
   el.style.fontStyle = style.fontStyle;
   el.style.textDecoration = style.underline ? "underline" : "none";
 
+  /* Defensive base — jangan bergantung CSS class */
+  el.style.display = "block";
+  el.style.minWidth = "1ch";
+  el.style.minHeight = "1em";
+  if (!el.style.fontSize || el.style.fontSize === "0px") {
+    el.style.fontSize = "24px";
+  }
+
   /* Defensive: base styling inline (tidak bergantung CSS load). */
   el.style.textAlign = "center";
   el.style.lineHeight = "1.25";
@@ -133,20 +141,31 @@ export function applyTextClipStyle(
   }
 }
 
-/* ============================================================
-   Z-INDEX COMPUTATION
-   ------------------------------------------------------------
-   Track 0 (top UI) = highest z. Transition source (fade-out)
-   gets +1 to paint above target (fade-in) → correct crossfade.
-   ============================================================ */
+/**
+ * Z-index computation.
+ *
+ * Track ordering: track 0 (top UI) = highest z.
+ * Transition source (fade-out) gets +1 to paint above target (fade-in).
+ *
+ * Text clips: ALWAYS render on top of all video/image clips,
+ * regardless of track position. Text is an overlay — the track
+ * position (V1 below V2) is UI-only, not visual z-order.
+ */
 export function computeZIndex(
   state: AppState,
   trackId: string,
   isSource: boolean,
+  isText: boolean = false,
 ): number {
+  /* Text overlay: fixed high z-index, above everything else. */
+  if (isText) {
+    return 10000 + (isSource ? 1 : 0);
+  }
+
   const tracks = state.project.sequence.tracks;
   const idx = tracks.findIndex((t) => t.id === trackId);
   if (idx < 0) return 1;
+
   const base = (tracks.length - idx) * 10;
   return isSource ? base + 1 : base;
 }

@@ -6,12 +6,6 @@ import { DEFAULT_TEXT_STYLE } from "@shared/types/timeline";
 import { openTextEditor } from "./text-editor.module";
 import type { TimelineView } from "./timeline.view";
 
-/* ============================================================
-   TEXT TOOL (create)
-   ------------------------------------------------------------
-   Klik di empty area video track → buat text clip di posisi klik.
-   Tool tetap aktif (multi-place). Audio track = no-op.
-   ============================================================ */
 export function attachTextTool(view: TimelineView): () => void {
   const onMouseDown = (ev: MouseEvent): void => {
     if (ev.button !== 0) return;
@@ -44,6 +38,8 @@ export function attachTextTool(view: TimelineView): () => void {
     const progress = Math.max(0, Math.min(1, px / tlRect.width));
     const startSec = progress * durationSec;
 
+    /* Text tetap di track yang di-klik (V1 bawah, dst.).
+       Overlay behaviour di preview di-handle via z-index logic. */
     actions.addTextClip(trackId, startSec);
     ev.preventDefault();
   };

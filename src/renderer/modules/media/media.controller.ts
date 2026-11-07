@@ -5,6 +5,7 @@ import type { MediaView } from "./media.view";
 import { eventBus } from "@core/events";
 import type { EffectKind, AnimationKind } from "@shared/types/timeline";
 import { deleteMediaAssetsFlow } from "../../app/flows";
+import { setDraggedAssetId } from "./media-drag";
 
 export interface MediaControllerCallbacks {
   readonly onImportClick: () => void;
@@ -95,6 +96,9 @@ export function attachMediaController(
       ev.dataTransfer?.setData(specificType, assetId);
       ev.dataTransfer?.setData("application/x-cutflow-media", assetId);
       if (ev.dataTransfer) ev.dataTransfer.effectAllowed = "copy";
+
+      /* Track dragged asset — used by drop ghost to know true duration. */
+      setDraggedAssetId(assetId);
     }),
   );
 
@@ -159,6 +163,12 @@ export function attachMediaController(
         actions.toggleClipAnimation(selectedId, kind);
       },
     ),
+  );
+
+  cleanups.push(
+    on(document, "dragend", () => {
+      setDraggedAssetId(null);
+    }),
   );
 
   return () => cleanups.forEach((fn) => fn());

@@ -13,6 +13,9 @@ import {
 } from "./timeline-drop.logic";
 import type { TimelineView } from "./timeline.view";
 
+import { getDraggedAssetId } from "@modules/media/media-drag";
+import { computeDefaultClipDuration } from "./timeline-drop.logic";
+
 /* ============================================================
    MEDIA DROP
    ------------------------------------------------------------
@@ -54,7 +57,18 @@ export function attachMediaDrop(view: TimelineView): () => void {
     const durationSec = state.project.sequence.durationSec;
 
     let startSec = clientXToTime(ev.clientX, tlRect, durationSec);
-    const clipDur = Math.min(DEFAULT_CLIP_DURATION_SEC, durationSec - startSec);
+
+    /* Ghost pakai durasi aktual asset (audio/video pakai
+   asset.durationSec, image fallback 5s). */
+    const draggedId = getDraggedAssetId();
+    const draggedAsset = draggedId
+      ? state.project.mediaAssets.find((a) => a.id === draggedId)
+      : null;
+    const preferredDur = draggedAsset
+      ? computeDefaultClipDuration(draggedAsset)
+      : DEFAULT_CLIP_DURATION_SEC;
+
+    const clipDur = Math.min(preferredDur, durationSec - startSec);
     startSec = clampStart(startSec, clipDur, durationSec);
 
     if (state.ui.timeline.snapEnabled && tlRect.width > 0) {

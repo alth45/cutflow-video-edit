@@ -71,6 +71,13 @@ export const TIMELINE = Object.freeze({
   MIN_CLIP_DURATION_SEC: 1 / 30, // = 1 frame @ 30fps
 
   MAX_SEQUENCE_DURATION_SEC: 24 * 3600,
+
+  /**
+   * Floor untuk auto-adjust sequence duration. Kalau content
+   * sangat pendek (mis. trim audio jadi 2s), sequence tetap
+   * minimal 5s supaya ruler/playhead tetap usabel.
+   */
+  MIN_SEQUENCE_DURATION_SEC: 5, // ← TAMBAH
 } as const);
 
 /* ============================================================
