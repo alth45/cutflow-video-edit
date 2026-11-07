@@ -41,8 +41,11 @@ export const IpcChannel = Object.freeze({
   MEDIA_PICK_FILES: "media:pick-files",
 
   /* ===== EXPORT ===== */
+  /* ===== EXPORT ===== */
   EXPORT_BEGIN: "export:begin",
-  EXPORT_CHUNK: "export:chunk",
+  EXPORT_SET_AUDIO: "export:set-audio",
+  EXPORT_START_VIDEO: "export:start-video",
+  EXPORT_WRITE_FRAME: "export:write-frame",
   EXPORT_FINISH: "export:finish",
   EXPORT_CANCEL: "export:cancel",
 } as const);

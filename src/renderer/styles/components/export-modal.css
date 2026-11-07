@@ -20,10 +20,10 @@
   gap: var(--space-4);
 }
 
-.export-modal-title {
-  font-size: var(--text-size-135);
-  font-weight: var(--fw-semibold);
-  color: var(--text);
+.export-modal-phase {
+  font-size: var(--text-size-115);
+  color: var(--muted);
+  margin-top: calc(-1 * var(--space-2));
 }
 
 .export-progress-wrap {

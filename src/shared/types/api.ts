@@ -93,14 +93,25 @@ export interface MediaFileInfo {
 /* ============================================================
    EXPORT
    ============================================================ */
+export interface VideoExportParams {
+  readonly width: number;
+  readonly height: number;
+  readonly fps: number;
+  readonly durationSec: number;
+}
+
 export interface ExportApi {
-  /** Buka save dialog. Return path + ok. */
-  begin(): Promise<{ ok: boolean; path?: string }>;
-  /** Kirim chunk data ke main process untuk ditulis ke file. */
-  chunk(data: Uint8Array): void;
-  /** Finalisasi file (flush + close). */
+  /** Buka save dialog + prepare temp paths. */
+  begin(params: VideoExportParams): Promise<{ ok: boolean; path?: string }>;
+  /** Kirim WAV audio buffer (sekali, sebelum frames). */
+  setAudio(wav: ArrayBuffer): Promise<{ ok: boolean }>;
+  /** Start ffmpeg dengan video+audio inputs. */
+  startVideo(): Promise<{ ok: boolean; error?: string }>;
+  /** Kirim 1 frame RGBA (W×H×4 bytes). Blocking sampai ffmpeg consume. */
+  writeFrame(rgba: ArrayBuffer): Promise<{ ok: boolean }>;
+  /** Close stdin → ffmpeg finalize → mp4 ready. */
   finish(): Promise<{ ok: boolean; error?: string }>;
-  /** Batalkan export (close stream + delete partial file). */
+  /** Cancel + cleanup temp. */
   cancel(): Promise<void>;
 }
 

@@ -1,7 +1,7 @@
 import { el, on } from "@core/Dom";
 
 export interface ExportModal {
-  readonly updateProgress: (pct: number) => void;
+  readonly update: (progress: number, phase: string, detail?: string) => void;
   readonly close: () => void;
 }
 
@@ -12,6 +12,10 @@ export function openExportModal(): ExportModal {
   const title = el("div", {
     className: "export-modal-title",
     text: "Exporting Video…",
+  });
+  const phaseEl = el("div", {
+    className: "export-modal-phase",
+    text: "Preparing…",
   });
 
   const progressWrap = el("div", { className: "export-progress-wrap" });
@@ -24,18 +28,19 @@ export function openExportModal(): ExportModal {
 
   const hint = el("div", {
     className: "export-modal-hint",
-    text: "Keep this window in focus. Audio + video captured in real-time.",
+    text: "Frame-accurate render. Duration depends on timeline length.",
   });
 
-  modal.append(title, progressWrap, progressText, hint);
+  modal.append(title, phaseEl, progressWrap, progressText, hint);
   overlay.append(modal);
   document.body.append(overlay);
 
   return {
-    updateProgress(pct: number) {
-      const rounded = Math.round(pct * 100);
-      progressBar.style.width = `${rounded}%`;
-      progressText.textContent = `${rounded}%`;
+    update(progress, phase, detail) {
+      const pct = Math.round(progress * 100);
+      progressBar.style.width = `${pct}%`;
+      progressText.textContent = detail ?? `${pct}%`;
+      phaseEl.textContent = phase;
     },
     close() {
       overlay.remove();

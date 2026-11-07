@@ -192,8 +192,10 @@ export async function exportVideoFlow(): Promise<void> {
   let modal: ReturnType<typeof openExportModal> | null = null;
   try {
     modal = openExportModal();
-    await exportProject(state, (pct) => modal?.updateProgress(pct));
-    toast("Export complete", "success");
+    await exportProject(state, (p) =>
+      modal?.update(p.progress, p.phase, p.detail),
+    );
+    toast("Export complete — MP4 saved", "success");
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (message !== "Export canceled") {

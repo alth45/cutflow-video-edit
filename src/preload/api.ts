@@ -7,6 +7,7 @@ import type {
   PickFilesResult,
 } from "@shared/types/api";
 import type { ExportApi } from "@shared/types/api";
+
 /* ============================================================
    IPC CHANNELS
    ------------------------------------------------------------
@@ -87,9 +88,16 @@ async function pickMediaFiles(): Promise<PickFilesResult> {
 }
 
 const exportApi: ExportApi = {
-  // ← TAMBAH
-  begin: () => invokeSafe(IpcChannel.EXPORT_BEGIN, { ok: false }),
-  chunk: (data) => ipcRenderer.send(IpcChannel.EXPORT_CHUNK, data),
+  begin: (params) => invokeSafe(IpcChannel.EXPORT_BEGIN, { ok: false }, params),
+  setAudio: (wav) =>
+    invokeSafe(IpcChannel.EXPORT_SET_AUDIO, { ok: false }, wav),
+  startVideo: () =>
+    invokeSafe(IpcChannel.EXPORT_START_VIDEO, {
+      ok: false,
+      error: "IPC failed",
+    }),
+  writeFrame: (rgba) =>
+    invokeSafe(IpcChannel.EXPORT_WRITE_FRAME, { ok: false }, rgba),
   finish: () =>
     invokeSafe(IpcChannel.EXPORT_FINISH, { ok: false, error: "IPC failed" }),
   cancel: () => invokeSafe(IpcChannel.EXPORT_CANCEL, undefined),
