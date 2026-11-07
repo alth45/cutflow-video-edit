@@ -113,3 +113,6 @@
 
 /* Info dialog — Help → Shortcuts / About */
 @import "./components/dialog.css";
+
+/* Clip animations — CSS keyframes preset */
+@import "./components/animations.css";

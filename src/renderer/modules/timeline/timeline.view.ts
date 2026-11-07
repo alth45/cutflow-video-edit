@@ -1,13 +1,18 @@
 import { el, clear } from "@core/Dom";
-import { createIcon } from "@core/icons";
+import { createIcon, type IconName } from "@core/icons";
 import { ZOOM } from "@shared/constants";
+import {
+  KEYFRAMEABLE_KEYS,
+  type Clip,
+  type Track,
+} from "@shared/types/timeline";
+import type { AppState } from "@shared/types/state";
 import { getClipsInTrack } from "@state/selectors";
 import { computeRulerLabels, timeToProgress } from "./timeline.logic";
 import { generateWaveform } from "./waveform.logic";
-import type { AppState } from "@shared/types/state";
-import type { Clip, Track } from "@shared/types/timeline";
 import { canTrimClip } from "./clip-trim.logic";
 import { detectJunctions } from "./clip-junction.logic";
+
 /* ============================================================
    TIMELINE VIEW
    ============================================================ */
@@ -17,6 +22,7 @@ export interface TimelineView {
   readonly zoomInput: HTMLInputElement;
   readonly zoomVal: HTMLElement;
   readonly snapBtn: HTMLButtonElement;
+  readonly keyframeBtn: HTMLButtonElement;
   readonly trackHeadsContainer: HTMLElement;
   readonly tlScroll: HTMLElement;
   readonly tlContent: HTMLElement;
@@ -28,6 +34,24 @@ export interface TimelineView {
   readonly marquee: HTMLElement;
 }
 
+/* ============================================================
+   CONSTANTS
+   ============================================================ */
+
+const TOOL_DEFS = [
+  { id: "pointer" as const, title: "Selection tool", icon: "pointer" as const },
+  { id: "razor" as const, title: "Razor tool", icon: "razor" as const },
+  { id: "hand" as const, title: "Hand tool", icon: "hand" as const },
+  { id: "text" as const, title: "Text tool", icon: "text" as const },
+];
+
+const ZOOM_PERCENT_MIN = ZOOM.MIN;
+const ZOOM_PERCENT_RANGE = ZOOM.MAX - ZOOM.MIN;
+
+/* ============================================================
+   MAIN RENDER
+   ============================================================ */
+
 export function renderTimeline(state: AppState): TimelineView {
   const seq = state.project.sequence;
 
@@ -35,93 +59,11 @@ export function renderTimeline(state: AppState): TimelineView {
   root.style.cssText =
     "display:flex;flex-direction:column;height:100%;min-height:0;";
 
-  /* ---------- Toolbar ---------- */
-  const toolbar = el("div", { className: "tl-toolbar" });
+  /* Toolbar (extracted) */
+  const { toolbar, zoomInput, zoomVal, snapBtn, keyframeBtn } =
+    buildToolbar(state);
 
-  const toolsLeft = el("div", { className: "tl-tools" });
-  const toolDefs = [
-    {
-      id: "pointer" as const,
-      title: "Selection tool",
-      icon: "pointer" as const,
-    },
-    { id: "razor" as const, title: "Razor tool", icon: "razor" as const },
-    { id: "hand" as const, title: "Hand tool", icon: "hand" as const },
-    { id: "text" as const, title: "Text tool", icon: "text" as const },
-  ];
-
-  for (const t of toolDefs) {
-    const isActive = state.ui.timeline.activeTool === t.id;
-    const btn = el("button", {
-      className: `icon-btn${isActive ? " active" : ""}`,
-      attrs: { title: t.title },
-    });
-    btn.dataset["tool"] = t.id;
-    btn.append(createIcon(t.icon));
-    toolsLeft.append(btn);
-  }
-
-  toolsLeft.append(el("span", { className: "divider" }));
-
-  const undoBtn = el("button", {
-    className: "icon-btn",
-    attrs: { title: "Undo" },
-  });
-  undoBtn.append(createIcon("undo"));
-  const redoBtn = el("button", {
-    className: "icon-btn",
-    attrs: { title: "Redo" },
-  });
-  redoBtn.append(createIcon("redo"));
-  toolsLeft.append(undoBtn, redoBtn);
-
-  const toolsRight = el("div", { className: "tl-tools right" });
-  const snapBtn = el("button", {
-    className: `icon-btn${state.ui.timeline.snapEnabled ? " active" : ""}`,
-    attrs: { title: "Toggle snapping" },
-  });
-  snapBtn.append(createIcon("magnet"));
-
-  const zoomOutIcon = createIcon("zoom-out");
-  zoomOutIcon.style.cssText = "width:14px;height:14px;";
-  zoomOutIcon.classList.add("muted");
-
-  const zoomInput = el("input", {
-    id: "zoom",
-    attrs: {
-      type: "range",
-      min: String(ZOOM.MIN),
-      max: String(ZOOM.MAX),
-      step: String(ZOOM.STEP),
-      value: String(state.ui.timeline.zoom),
-    },
-  });
-  zoomInput.style.setProperty(
-    "--val",
-    `${((state.ui.timeline.zoom - ZOOM.MIN) / (ZOOM.MAX - ZOOM.MIN)) * 100}%`,
-  );
-
-  const zoomInIcon = createIcon("zoom-in");
-  zoomInIcon.style.cssText = "width:14px;height:14px;";
-  zoomInIcon.classList.add("muted");
-
-  const zoomVal = el("span", {
-    className: "zoom-val",
-    text: `${Math.round(state.ui.timeline.zoom * 100)}%`,
-  });
-
-  toolsRight.append(
-    snapBtn,
-    el("span", { className: "divider" }),
-    zoomOutIcon,
-    zoomInput,
-    zoomInIcon,
-    zoomVal,
-  );
-
-  toolbar.append(toolsLeft, toolsRight);
-
-  /* ---------- Body: heads + scroll ---------- */
+  /* Body: track heads (left) + scroll area (right) */
   const body = el("div", { className: "tl-body" });
 
   const trackHeadsContainer = el("div", { className: "track-heads" });
@@ -157,7 +99,7 @@ export function renderTimeline(state: AppState): TimelineView {
 
   root.append(toolbar, body);
 
-  /* Render awal dynamic content */
+  /* Initial dynamic content */
   renderRulerInto(ruler, seq.durationSec);
   renderTrackHeads(trackHeadsContainer, state);
   renderTracks(tracksContainer, state);
@@ -167,6 +109,7 @@ export function renderTimeline(state: AppState): TimelineView {
     zoomInput,
     zoomVal,
     snapBtn,
+    keyframeBtn,
     trackHeadsContainer,
     tlScroll,
     tlContent,
@@ -180,17 +123,129 @@ export function renderTimeline(state: AppState): TimelineView {
 }
 
 /* ============================================================
-   DYNAMIC RENDERERS (dipanggil ulang oleh subscriber)
+   TOOLBAR BUILDER
+   ============================================================ */
+
+interface ToolbarRefs {
+  readonly toolbar: HTMLElement;
+  readonly zoomInput: HTMLInputElement;
+  readonly zoomVal: HTMLElement;
+  readonly snapBtn: HTMLButtonElement;
+  readonly keyframeBtn: HTMLButtonElement;
+}
+
+function buildToolbar(state: AppState): ToolbarRefs {
+  const toolbar = el("div", { className: "tl-toolbar" });
+
+  /* --- Left group: tools | undo/redo | keyframe --- */
+  const toolsLeft = el("div", { className: "tl-tools" });
+
+  for (const t of TOOL_DEFS) {
+    const isActive = state.ui.timeline.activeTool === t.id;
+    const btn = el("button", {
+      className: `icon-btn${isActive ? " active" : ""}`,
+      attrs: { title: t.title },
+    });
+    btn.dataset["tool"] = t.id;
+    btn.append(createIcon(t.icon));
+    toolsLeft.append(btn);
+  }
+
+  toolsLeft.append(el("span", { className: "divider" }));
+
+  const undoBtn = el("button", {
+    className: "icon-btn",
+    attrs: { title: "Undo" },
+  });
+  undoBtn.append(createIcon("undo"));
+
+  const redoBtn = el("button", {
+    className: "icon-btn",
+    attrs: { title: "Redo" },
+  });
+  redoBtn.append(createIcon("redo"));
+
+  const keyframeBtn = el("button", {
+    className: "icon-btn kf-none",
+    attrs: { title: "Toggle keyframe at playhead" },
+  });
+  keyframeBtn.append(createIcon("diamond"));
+  keyframeBtn.disabled = true;
+
+  toolsLeft.append(
+    undoBtn,
+    redoBtn,
+    el("span", { className: "divider" }),
+    keyframeBtn,
+  );
+
+  /* --- Right group: snap | zoom --- */
+  const toolsRight = el("div", { className: "tl-tools right" });
+
+  const snapBtn = el("button", {
+    className: `icon-btn${state.ui.timeline.snapEnabled ? " active" : ""}`,
+    attrs: { title: "Toggle snapping" },
+  });
+  snapBtn.append(createIcon("magnet"));
+
+  const zoomOutIcon = createIcon("zoom-out");
+  zoomOutIcon.style.cssText = "width:14px;height:14px;";
+  zoomOutIcon.classList.add("muted");
+
+  const zoomInput = el("input", {
+    id: "zoom",
+    attrs: {
+      type: "range",
+      min: String(ZOOM.MIN),
+      max: String(ZOOM.MAX),
+      step: String(ZOOM.STEP),
+      value: String(state.ui.timeline.zoom),
+    },
+  });
+  zoomInput.style.setProperty(
+    "--val",
+    `${((state.ui.timeline.zoom - ZOOM_PERCENT_MIN) / ZOOM_PERCENT_RANGE) * 100}%`,
+  );
+
+  const zoomInIcon = createIcon("zoom-in");
+  zoomInIcon.style.cssText = "width:14px;height:14px;";
+  zoomInIcon.classList.add("muted");
+
+  const zoomVal = el("span", {
+    className: "zoom-val",
+    text: `${Math.round(state.ui.timeline.zoom * 100)}%`,
+  });
+
+  toolsRight.append(
+    snapBtn,
+    el("span", { className: "divider" }),
+    zoomOutIcon,
+    zoomInput,
+    zoomInIcon,
+    zoomVal,
+  );
+
+  toolbar.append(toolsLeft, toolsRight);
+
+  return { toolbar, zoomInput, zoomVal, snapBtn, keyframeBtn };
+}
+
+/* ============================================================
+   RULER
    ============================================================ */
 
 export function renderRulerInto(ruler: HTMLElement, durationSec: number): void {
   clear(ruler);
   for (const lbl of computeRulerLabels(durationSec)) {
-    const el2 = el("span", { className: "rl", text: lbl.label });
-    el2.style.left = `${lbl.percent * 100}%`;
-    ruler.append(el2);
+    const labelEl = el("span", { className: "rl", text: lbl.label });
+    labelEl.style.left = `${lbl.percent * 100}%`;
+    ruler.append(labelEl);
   }
 }
+
+/* ============================================================
+   TRACK HEADS
+   ============================================================ */
 
 export function renderTrackHeads(
   container: HTMLElement,
@@ -208,49 +263,58 @@ export function renderTrackHeads(
     th.append(badge, document.createTextNode(track.name));
 
     const btns = el("div", { className: "th-btns" });
-
-    /* Audio track: first button = mute toggle. Video track: = hide toggle. */
-    const isAudioTrack = track.kind === "audio";
-    const toggleState = isAudioTrack ? track.muted : track.hidden;
-    const toggleIcon = isAudioTrack
-      ? toggleState
-        ? "volume-muted"
-        : "volume"
-      : "eye";
-    const toggleTitle = isAudioTrack
-      ? toggleState
-        ? "Unmute track"
-        : "Mute track"
-      : toggleState
-        ? "Show track"
-        : "Hide track";
-
-    const toggleBtn = el("button", {
-      className: `icon-btn${toggleState ? " active" : ""}`,
-      attrs: { title: toggleTitle },
-    });
-    toggleBtn.append(createIcon(toggleIcon));
-
-    const lockBtn = el("button", {
-      className: `icon-btn${track.locked ? " active" : ""}`,
-      attrs: { title: track.locked ? "Unlock track" : "Lock track" },
-    });
-    lockBtn.append(createIcon("lock"));
-
-    toggleBtn.dataset["toggle"] = isAudioTrack ? "muted" : "hidden";
-    lockBtn.dataset["toggle"] = "locked";
-
-    btns.append(toggleBtn, lockBtn);
+    btns.append(buildTrackToggleButton(track));
+    btns.append(buildLockButton(track));
     th.append(btns);
+
     container.append(th);
   }
 }
+
+/** First button: mute toggle (audio) or hide toggle (video). */
+function buildTrackToggleButton(track: Track): HTMLButtonElement {
+  const isAudio = track.kind === "audio";
+  const isActive = isAudio ? track.muted : track.hidden;
+
+  let icon: IconName;
+  let title: string;
+  if (isAudio) {
+    icon = isActive ? "volume-muted" : "volume";
+    title = isActive ? "Unmute track" : "Mute track";
+  } else {
+    icon = "eye";
+    title = isActive ? "Show track" : "Hide track";
+  }
+
+  const btn = el("button", {
+    className: `icon-btn${isActive ? " active" : ""}`,
+    attrs: { title },
+  });
+  btn.append(createIcon(icon));
+  btn.dataset["toggle"] = isAudio ? "muted" : "hidden";
+  return btn;
+}
+
+function buildLockButton(track: Track): HTMLButtonElement {
+  const btn = el("button", {
+    className: `icon-btn${track.locked ? " active" : ""}`,
+    attrs: { title: track.locked ? "Unlock track" : "Lock track" },
+  });
+  btn.append(createIcon("lock"));
+  btn.dataset["toggle"] = "locked";
+  return btn;
+}
+
+/* ============================================================
+   TRACKS
+   ============================================================ */
 
 export function renderTracks(container: HTMLElement, state: AppState): void {
   clear(container);
 
   const selectedTransitionId = state.selection.selectedTransitionId;
   const dur = state.project.sequence.durationSec;
+  const selectedClipIds = new Set(state.selection.selectedClipIds);
 
   for (const track of state.project.sequence.tracks) {
     const trackEl = el("div", {
@@ -258,12 +322,10 @@ export function renderTracks(container: HTMLElement, state: AppState): void {
     });
     trackEl.dataset["trackId"] = track.id;
 
-    const selected = new Set(state.selection.selectedClipIds);
     for (const clip of getClipsInTrack(track)) {
-      trackEl.append(renderClip(clip, state, selected.has(clip.id)));
+      trackEl.append(renderClip(clip, state, selectedClipIds.has(clip.id)));
     }
 
-    /* Transitions di junction */
     for (const junction of detectJunctions(track)) {
       const isSelected =
         junction.existingTransition !== null &&
@@ -286,24 +348,24 @@ function renderClip(
   const leftPct = (clip.startSec / dur) * 100;
   const widthPct = (clip.durationSec / dur) * 100;
 
-  const el2 = el("div", {
+  const clipEl = el("div", {
     className: `clip ${clip.kind} c-${clip.colorToken}${isSelected ? " selected" : ""}`,
   });
-  el2.style.left = `${leftPct}%`;
-  el2.style.width = `${widthPct}%`;
-  el2.dataset["clipId"] = clip.id;
+  clipEl.style.left = `${leftPct}%`;
+  clipEl.style.width = `${widthPct}%`;
+  clipEl.dataset["clipId"] = clip.id;
 
+  /* Label */
   const label = el("div", { className: "clip-label" });
   const iconName =
     clip.kind === "text" ? "text" : clip.kind === "audio" ? "music" : "film";
+  label.append(
+    createIcon(iconName),
+    el("span", { className: "clip-label-text", text: clip.name }),
+  );
+  clipEl.append(label);
 
-  const labelText = el("span", {
-    className: "clip-label-text",
-    text: clip.name,
-  });
-  label.append(createIcon(iconName), labelText);
-  el2.append(label);
-
+  /* Waveform (audio only) */
   if (clip.kind === "audio") {
     const wave = el("div", { className: "wave" });
     for (const h of generateWaveform(clip.id)) {
@@ -311,23 +373,51 @@ function renderClip(
       bar.style.height = `${h}%`;
       wave.append(bar);
     }
-    el2.append(wave);
+    clipEl.append(wave);
   }
 
-  /* Trim handle di kanan */
+  /* Keyframe markers */
+  appendKeyframeMarkers(clipEl, clip);
+
+  /* Trim handle (right edge) */
   if (canTrimClip(clip)) {
-    el2.append(el("div", { className: "clip-trim clip-trim-right" }));
+    clipEl.append(el("div", { className: "clip-trim clip-trim-right" }));
   }
 
-  return el2;
+  return clipEl;
+}
+
+function appendKeyframeMarkers(clipEl: HTMLElement, clip: Clip): void {
+  const kfMap = clip.keyframes ?? {};
+  const kfTimes = new Set<number>();
+
+  for (const key of KEYFRAMEABLE_KEYS) {
+    for (const kf of kfMap[key] ?? []) {
+      /* Dedup by 2 decimals — 2.001 and 2.004 → same marker. */
+      kfTimes.add(Math.round(kf.timeSec * 100) / 100);
+    }
+  }
+
+  if (kfTimes.size === 0 || clip.durationSec <= 0) return;
+
+  const layer = el("div", { className: "clip-keyframe-layer" });
+  const sorted = Array.from(kfTimes).sort((a, b) => a - b);
+
+  for (const t of sorted) {
+    const pct = (t / clip.durationSec) * 100;
+    const marker = el("div", { className: "clip-keyframe-marker" });
+    /* Clamp so marker stays fully inside clip (overflow:hidden). */
+    marker.style.left = `clamp(5px, ${pct}%, calc(100% - 5px))`;
+    marker.title = `Keyframe @ ${t.toFixed(2)}s`;
+    marker.dataset["kfTime"] = String(t);
+    layer.append(marker);
+  }
+
+  clipEl.append(layer);
 }
 
 /* ============================================================
    TRANSITION BOX
-   ------------------------------------------------------------
-   Kotak kecil di junction antara dua clip. Empty = placeholder
-   (klik untuk add). Filled = transition active (klik untuk
-   select).
    ============================================================ */
 
 function renderTransitionBox(
@@ -349,7 +439,6 @@ function renderTransitionBox(
   box.dataset["transitionId"] = junction.existingTransition?.id ?? "";
   box.dataset["beforeClipId"] = junction.beforeClip.id;
   box.dataset["afterClipId"] = junction.afterClip.id;
-  box.dataset["trackId"] = "";
   box.setAttribute(
     "title",
     hasTransition
@@ -364,6 +453,10 @@ function renderTransitionBox(
 
   return box;
 }
+
+/* ============================================================
+   UPDATERS (called by subscriber)
+   ============================================================ */
 
 export function updatePlayheadState(view: TimelineView, state: AppState): void {
   const p = timeToProgress(
@@ -384,15 +477,17 @@ export function updateSelection(view: TimelineView, state: AppState): void {
 }
 
 export function updateZoom(view: TimelineView, state: AppState): void {
-  view.tlContent.style.setProperty("--zoom", String(state.ui.timeline.zoom));
-  if (view.zoomInput.value !== String(state.ui.timeline.zoom)) {
-    view.zoomInput.value = String(state.ui.timeline.zoom);
+  const zoom = state.ui.timeline.zoom;
+  view.tlContent.style.setProperty("--zoom", String(zoom));
+
+  if (view.zoomInput.value !== String(zoom)) {
+    view.zoomInput.value = String(zoom);
   }
   view.zoomInput.style.setProperty(
     "--val",
-    `${((state.ui.timeline.zoom - ZOOM.MIN) / (ZOOM.MAX - ZOOM.MIN)) * 100}%`,
+    `${((zoom - ZOOM_PERCENT_MIN) / ZOOM_PERCENT_RANGE) * 100}%`,
   );
-  view.zoomVal.textContent = `${Math.round(state.ui.timeline.zoom * 100)}%`;
+  view.zoomVal.textContent = `${Math.round(zoom * 100)}%`;
   view.snapBtn.classList.toggle("active", state.ui.timeline.snapEnabled);
 }
 

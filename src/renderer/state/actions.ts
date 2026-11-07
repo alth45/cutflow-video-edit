@@ -11,6 +11,7 @@ import {
   DEFAULT_CLIP_COLOR,
   DEFAULT_CLIP_AUDIO,
   DEFAULT_TEXT_STYLE,
+  KEYFRAMEABLE_KEYS,
 } from "@shared/types/timeline";
 import type {
   Clip,
@@ -26,6 +27,8 @@ import type {
   TextClipStyle,
   EffectKind,
   ClipEffect,
+  ClipAnimation,
+  AnimationKind,
 } from "@shared/types/timeline";
 import type {
   AppState,
@@ -39,7 +42,15 @@ import type { TimelineTool } from "@shared/types/state";
 import { makeId } from "@utils/id";
 import { setClipboard, getClipboard, type ClipboardEntry } from "./clipboard";
 import { createDefaultEffect } from "@modules/effects/effect.logic";
-
+import {
+  sortKeyframes,
+  evaluateKeyframeValue,
+} from "@modules/keyframes/keyframe.logic";
+import type {
+  Keyframe,
+  KeyframeMap,
+  KeyframeableTransformKey,
+} from "@shared/types/timeline";
 /* ============================================================
    ACTIONS
    ------------------------------------------------------------
@@ -1075,6 +1086,51 @@ export function removeEffectFromClip(clipId: string, effectId: string): void {
 }
 
 /* ============================================================
+   CLIP ANIMATION (F14af)
+   ------------------------------------------------------------
+   Toggle animasi (exclusive — 1 clip = 1 animasi aktif).
+   - Sama kind → remove (null).
+   - Beda kind → replace.
+   - Kosong → apply.
+   ============================================================ */
+
+export function toggleClipAnimation(clipId: string, kind: AnimationKind): void {
+  appStore.setState((state) => {
+    for (const track of state.project.sequence.tracks) {
+      if (track.locked) continue;
+
+      const idx = track.clips.findIndex((c) => c.id === clipId);
+      if (idx < 0) continue;
+
+      const clip = track.clips[idx];
+      if (!clip) return state;
+
+      const current = clip.animation ?? null;
+      const next: ClipAnimation | null =
+        current?.kind === kind ? null : { kind };
+
+      if ((current?.kind ?? null) === (next?.kind ?? null)) return state;
+
+      const nextClip: Clip = { ...clip, animation: next };
+      const nextClips = [...track.clips];
+      nextClips[idx] = nextClip;
+
+      const nextProject = {
+        ...state.project,
+        sequence: {
+          ...state.project.sequence,
+          tracks: state.project.sequence.tracks.map((t) =>
+            t.id === track.id ? { ...t, clips: nextClips } : t,
+          ),
+        },
+      };
+      return withProject(state, nextProject);
+    }
+    return state;
+  });
+}
+
+/* ============================================================
    CLIPBOARD OPERATIONS
    ------------------------------------------------------------
    Copy / cut / paste untuk clip. Internal clipboard (module
@@ -1325,6 +1381,248 @@ export function setClipTransformProperty<K extends keyof ClipTransform>(
         transform: { ...currentTransform, [key]: value },
       };
 
+      const nextClips = [...track.clips];
+      nextClips[idx] = nextClip;
+
+      const nextProject = {
+        ...state.project,
+        sequence: {
+          ...state.project.sequence,
+          tracks: state.project.sequence.tracks.map((t) =>
+            t.id === track.id ? { ...t, clips: nextClips } : t,
+          ),
+        },
+      };
+      return withProject(state, nextProject);
+    }
+    return state;
+  });
+}
+
+/* ============================================================
+   KEYFRAMES (F14ad)
+   ------------------------------------------------------------
+   Toggle keyframe di playhead (add kalau belum ada, remove
+   kalau sudah ada). Smart slider: kalau property punya kf,
+   update kf terdekat / tambah baru; kalau tidak, update base.
+   ============================================================ */
+
+export function toggleTransformKeyframe(
+  clipId: string,
+  key: KeyframeableTransformKey,
+  playheadLocalSec: number,
+): void {
+  appStore.setState((state) => {
+    for (const track of state.project.sequence.tracks) {
+      if (track.locked) continue;
+
+      const idx = track.clips.findIndex((c) => c.id === clipId);
+      if (idx < 0) continue;
+
+      const clip = track.clips[idx];
+      if (!clip) return state;
+
+      const kfs: KeyframeMap = clip.keyframes ?? {};
+      const existing = kfs[key] ?? [];
+      const local = Math.max(0, Math.min(clip.durationSec, playheadLocalSec));
+      const match = existing.find((kf) => Math.abs(kf.timeSec - local) <= 0.05);
+
+      let nextKfsForKey: readonly Keyframe[];
+      if (match) {
+        nextKfsForKey = existing.filter((kf) => kf.id !== match.id);
+      } else {
+        const baseVal = clip.transform?.[key] ?? DEFAULT_CLIP_TRANSFORM[key];
+        const currentValue = evaluateKeyframeValue(
+          existing,
+          local,
+          baseVal as number,
+        );
+        nextKfsForKey = sortKeyframes([
+          ...existing,
+          {
+            id: makeId("kf"),
+            timeSec: Math.round(local * 1000) / 1000,
+            value: currentValue,
+          },
+        ]);
+      }
+
+      const nextKfs: KeyframeMap = { ...kfs, [key]: nextKfsForKey };
+      const nextClip: Clip = { ...clip, keyframes: nextKfs };
+      const nextClips = [...track.clips];
+      nextClips[idx] = nextClip;
+
+      const nextProject = {
+        ...state.project,
+        sequence: {
+          ...state.project.sequence,
+          tracks: state.project.sequence.tracks.map((t) =>
+            t.id === track.id ? { ...t, clips: nextClips } : t,
+          ),
+        },
+      };
+      return withProject(state, nextProject);
+    }
+    return state;
+  });
+}
+
+/**
+ * Set transform property smart: kalau property punya keyframes,
+ * update/add keyframe at playhead; kalau tidak, update base.
+ */
+export function setClipTransformPropertySmart(
+  clipId: string,
+  key: KeyframeableTransformKey,
+  value: number,
+  playheadLocalSec: number,
+): void {
+  appStore.setState((state) => {
+    for (const track of state.project.sequence.tracks) {
+      if (track.locked) continue;
+
+      const idx = track.clips.findIndex((c) => c.id === clipId);
+      if (idx < 0) continue;
+
+      const clip = track.clips[idx];
+      if (!clip) return state;
+
+      const kfs: KeyframeMap = clip.keyframes ?? {};
+      const existing = kfs[key] ?? [];
+
+      /* Tidak ada kf → update base. */
+      if (existing.length === 0) {
+        const base = clip.transform ?? DEFAULT_CLIP_TRANSFORM;
+        if (base[key] === value) return state;
+
+        const nextClip: Clip = {
+          ...clip,
+          transform: { ...base, [key]: value },
+        };
+        const nextClips = [...track.clips];
+        nextClips[idx] = nextClip;
+
+        const nextProject = {
+          ...state.project,
+          sequence: {
+            ...state.project.sequence,
+            tracks: state.project.sequence.tracks.map((t) =>
+              t.id === track.id ? { ...t, clips: nextClips } : t,
+            ),
+          },
+        };
+        return withProject(state, nextProject);
+      }
+
+      /* Ada kf → update/add kf at playhead. */
+      const local = Math.max(0, Math.min(clip.durationSec, playheadLocalSec));
+      const match = existing.find((kf) => Math.abs(kf.timeSec - local) <= 0.05);
+
+      let nextKfsForKey: readonly Keyframe[];
+      if (match) {
+        nextKfsForKey = existing.map((kf) =>
+          kf.id === match.id ? { ...kf, value } : kf,
+        );
+      } else {
+        nextKfsForKey = sortKeyframes([
+          ...existing,
+          {
+            id: makeId("kf"),
+            timeSec: Math.round(local * 1000) / 1000,
+            value,
+          },
+        ]);
+      }
+
+      const nextKfs: KeyframeMap = { ...kfs, [key]: nextKfsForKey };
+      const nextClip: Clip = { ...clip, keyframes: nextKfs };
+      const nextClips = [...track.clips];
+      nextClips[idx] = nextClip;
+
+      const nextProject = {
+        ...state.project,
+        sequence: {
+          ...state.project.sequence,
+          tracks: state.project.sequence.tracks.map((t) =>
+            t.id === track.id ? { ...t, clips: nextClips } : t,
+          ),
+        },
+      };
+      return withProject(state, nextProject);
+    }
+    return state;
+  });
+}
+
+/**
+ * Toggle keyframe untuk SEMUA transform properties pada playhead.
+ * - Kalau TIDAK ada kf di playhead → add kf untuk semua property
+ *   (snapshot nilai efektif saat ini).
+ * - Kalau ADA kf di playhead (minimal 1 property) → remove kf
+ *   semua property yang ada di playhead.
+ * 1 history entry.
+ */
+export function toggleAllKeyframesAtPlayhead(
+  clipId: string,
+  playheadLocalSec: number,
+): void {
+  appStore.setState((state) => {
+    for (const track of state.project.sequence.tracks) {
+      if (track.locked) continue;
+
+      const idx = track.clips.findIndex((c) => c.id === clipId);
+      if (idx < 0) continue;
+
+      const clip = track.clips[idx];
+      if (!clip) return state;
+
+      const local = Math.max(0, Math.min(clip.durationSec, playheadLocalSec));
+      const kfs = clip.keyframes ?? {};
+
+      /* Cek apakah ada kf di playhead (property manapun). */
+      let anyAtPlayhead = false;
+      for (const key of KEYFRAMEABLE_KEYS) {
+        const arr = kfs[key] ?? [];
+        if (arr.some((kf) => Math.abs(kf.timeSec - local) <= 0.05)) {
+          anyAtPlayhead = true;
+          break;
+        }
+      }
+
+      const nextKfs: Record<string, readonly Keyframe[]> = { ...kfs };
+
+      if (anyAtPlayhead) {
+        /* Remove semua kf di playhead. */
+        for (const key of KEYFRAMEABLE_KEYS) {
+          const existing = kfs[key] ?? [];
+          if (existing.length === 0) continue;
+          const filtered = existing.filter(
+            (kf) => Math.abs(kf.timeSec - local) > 0.05,
+          );
+          if (filtered.length !== existing.length) {
+            nextKfs[key] = filtered;
+          }
+        }
+      } else {
+        /* Add kf untuk semua property (snapshot effective value). */
+        for (const key of KEYFRAMEABLE_KEYS) {
+          const existing = kfs[key] ?? [];
+          const base = clip.transform?.[key] ?? DEFAULT_CLIP_TRANSFORM[key];
+          const effectiveValue = evaluateKeyframeValue(
+            existing,
+            local,
+            base as number,
+          );
+          const newKf: Keyframe = {
+            id: makeId("kf"),
+            timeSec: Math.round(local * 1000) / 1000,
+            value: effectiveValue,
+          };
+          nextKfs[key] = sortKeyframes([...existing, newKf]);
+        }
+      }
+
+      const nextClip: Clip = { ...clip, keyframes: nextKfs };
       const nextClips = [...track.clips];
       nextClips[idx] = nextClip;
 
@@ -1827,6 +2125,8 @@ export function addTextClip(trackId: string, startSec: number): void {
       color: DEFAULT_CLIP_COLOR,
       audio: DEFAULT_CLIP_AUDIO,
       effects: [],
+      keyframes: {},
+      animation: null,
       source: { kind: "text", content: "Text", style: DEFAULT_TEXT_STYLE },
     };
 
@@ -1847,6 +2147,11 @@ export function addTextClip(trackId: string, startSec: number): void {
         ...state.selection,
         selectedClipIds: [textClip.id],
         selectedTransitionId: null,
+      },
+      /* Seek playhead ke text clip agar langsung terlihat di preview. */
+      playback: {
+        ...state.playback,
+        currentTimeSec: textClip.startSec + 0.05,
       },
     };
   });

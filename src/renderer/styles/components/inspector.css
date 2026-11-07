@@ -288,3 +288,55 @@ input[type="range"]::-moz-range-thumb {
   pointer-events: none;
   filter: grayscale(0.5);
 }
+
+/* ============================================================
+   KEYFRAME DIAMOND (F14ad)
+   ============================================================ */
+.row {
+  grid-template-columns: 72px 1fr 36px;
+}
+
+.row:has(.keyframe-btn) {
+  grid-template-columns: 18px 72px 1fr 36px;
+}
+
+.keyframe-btn {
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  color: var(--muted-2);
+  opacity: 0.5;
+}
+
+.row:hover .keyframe-btn {
+  opacity: 1;
+}
+
+.keyframe-btn:hover {
+  background: rgba(124, 92, 255, 0.15);
+  color: var(--accent);
+}
+
+.keyframe-btn.kf-none {
+  color: var(--muted-2);
+}
+
+.keyframe-btn.kf-has {
+  color: var(--accent);
+  opacity: 1;
+}
+
+.keyframe-btn.kf-at {
+  color: var(--accent);
+  opacity: 1;
+  text-shadow: 0 0 6px var(--accent);
+}

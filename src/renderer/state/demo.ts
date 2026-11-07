@@ -210,6 +210,8 @@ function buildClip(
     color: DEFAULT_CLIP_COLOR,
     audio: DEFAULT_CLIP_AUDIO,
     effects: [],
+    keyframes: {},
+    animation: null, 
   };
 
   switch (spec.kind) {

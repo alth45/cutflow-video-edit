@@ -171,6 +171,28 @@ export interface ClipEffect {
 }
 
 /* ============================================================
+   CLIP ANIMATION (F14af)
+   ------------------------------------------------------------
+   Preset animasi yang di-apply ke clip (image/video/text).
+   Satu clip hanya bisa 1 animasi aktif (hindari CSS transform
+   conflict — shake + spin = bentrok).
+   ============================================================ */
+export type AnimationKind =
+  | "shake"
+  | "glitch"
+  | "pulse"
+  | "spin"
+  | "bounce"
+  | "swing"
+  | "flash"
+  | "wave"
+  | "zoom"
+  | "float";
+
+export interface ClipAnimation {
+  readonly kind: AnimationKind;
+}
+/* ============================================================
    TEXT CLIP STYLE (F14z)
    ------------------------------------------------------------
    Styling untuk text clip. Semua via CSS di preview.
@@ -194,6 +216,38 @@ export const DEFAULT_TEXT_STYLE: TextClipStyle = Object.freeze({
   strokeWidth: 2,
   outlineOnly: false,
 });
+
+/* ============================================================
+   KEYFRAME (F14ad)
+   ------------------------------------------------------------
+   Keyframe = snap value pada waktu tertentu (relatif ke clip
+   start). Kalau property punya keyframes, nilainya diinterpolasi
+   linear antara keyframe. Kalau tidak punya, pakai base value.
+   ============================================================ */
+export interface Keyframe {
+  readonly id: string;
+  readonly timeSec: number; // relatif terhadap clip.startSec
+  readonly value: number;
+}
+
+export type KeyframeableTransformKey =
+  | "positionX"
+  | "positionY"
+  | "scale"
+  | "rotation"
+  | "opacity";
+
+export type KeyframeMap = {
+  readonly [K in KeyframeableTransformKey]?: readonly Keyframe[];
+};
+
+export const KEYFRAMEABLE_KEYS: readonly KeyframeableTransformKey[] = [
+  "positionX",
+  "positionY",
+  "scale",
+  "rotation",
+  "opacity",
+];
 
 /** Clip yang sumbernya file media. */
 export interface MediaClipSource {
@@ -262,7 +316,9 @@ interface ClipBase {
   readonly transform: ClipTransform;
   readonly color: ClipColor;
   readonly audio: ClipAudio;
-  readonly effects: readonly ClipEffect[]; // ← TAMBAH
+  readonly effects: readonly ClipEffect[];
+  readonly keyframes: KeyframeMap;
+  readonly animation: ClipAnimation | null;
 }
 
 /**

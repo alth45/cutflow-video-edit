@@ -115,6 +115,8 @@ export function buildClipFromAsset(asset: MediaAsset, startSec: number): Clip {
     color: DEFAULT_CLIP_COLOR,
     audio: DEFAULT_CLIP_AUDIO,
     effects: [],
+    keyframes: {},
+    animation: null,
   };
 
   if (kind === "audio") {

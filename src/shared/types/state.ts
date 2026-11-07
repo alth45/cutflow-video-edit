@@ -63,7 +63,11 @@ export interface PlaybackState {
 /* ============================================================
    UI — MEDIA PANEL
    ============================================================ */
-export type MediaPanelTab = 'media-bin' | 'media-fx' | 'media-tr';
+export type MediaPanelTab =
+  | "media-bin"
+  | "media-fx"
+  | "media-tr"
+  | "media-anim";
 
 export interface MediaPanelState {
   readonly activeTab: MediaPanelTab;
@@ -74,7 +78,7 @@ export interface MediaPanelState {
 /* ============================================================
    UI — INSPECTOR PANEL
    ============================================================ */
-export type InspectorPanelTab = 'insp-video' | 'insp-audio' | 'insp-color';
+export type InspectorPanelTab = "insp-video" | "insp-audio" | "insp-color";
 
 export interface InspectorPanelState {
   readonly activeTab: InspectorPanelTab;
@@ -84,7 +88,7 @@ export interface InspectorPanelState {
 /* ============================================================
    UI — TIMELINE VIEW
    ============================================================ */
-export type TimelineTool = 'pointer' | 'razor' | 'hand' | 'text';
+export type TimelineTool = "pointer" | "razor" | "hand" | "text";
 
 export interface TimelineViewState {
   readonly zoom: number;

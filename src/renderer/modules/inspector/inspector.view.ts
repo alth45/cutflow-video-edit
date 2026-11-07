@@ -26,6 +26,7 @@ export interface SliderRef {
   readonly input: HTMLInputElement;
   readonly valueEl: HTMLElement;
   readonly def: SliderRow;
+  readonly keyframeBtn: HTMLButtonElement | null;
 }
 
 export interface SwitchRef {
@@ -272,8 +273,26 @@ function renderSliderRow(
     text: row.format(currentValue),
   });
 
-  wrap.append(label, input, valueEl);
-  slidersOut.set(input, { input, valueEl, def: row });
+  let keyframeBtn: HTMLButtonElement | null = null;
+  if (row.keyframeKey) {
+    keyframeBtn = el("button", {
+      className: "keyframe-btn",
+      attrs: {
+        type: "button",
+        title: "Add/remove keyframe at playhead",
+      },
+    });
+    keyframeBtn.dataset["keyframeKey"] = row.keyframeKey;
+    keyframeBtn.append(document.createTextNode("◆"));
+  }
+
+  if (keyframeBtn) {
+    wrap.append(keyframeBtn, label, input, valueEl);
+  } else {
+    wrap.append(label, input, valueEl);
+  }
+
+  slidersOut.set(input, { input, valueEl, def: row, keyframeBtn });
   return wrap;
 }
 
@@ -319,4 +338,14 @@ function renderCurveRow(): HTMLElement {
     </svg>
   `;
   return box;
+}
+
+export type KeyframeBtnState = "none" | "has" | "at";
+
+export function setKeyframeBtnState(
+  btn: HTMLButtonElement,
+  state: KeyframeBtnState,
+): void {
+  btn.classList.remove("kf-none", "kf-has", "kf-at");
+  btn.classList.add(`kf-${state}`);
 }

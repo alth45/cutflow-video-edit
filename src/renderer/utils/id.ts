@@ -24,7 +24,8 @@ export type IdPrefix =
   | "track"
   | "clip"
   | "media"
-  | "effect";
+  | "effect"
+  | "kf";
 
 /**
  * Hasilkan ID unik dengan format `<prefix>_<uuid-v4>`.

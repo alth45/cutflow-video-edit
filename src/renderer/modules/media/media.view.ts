@@ -16,6 +16,10 @@ import type { AppState, MediaPanelTab } from "@shared/types/state";
 import { mediaUrl, isDemoPath } from "@utils/media-url";
 import { EFFECT_DEFINITIONS } from "@modules/effects/effect-definitions";
 import type { Clip } from "@shared/types/timeline";
+import {
+  ANIMATION_DEFINITIONS,
+  type AnimationDef,
+} from "@modules/animations/animation-definitions";
 
 /* ============================================================
    MEDIA VIEW
@@ -31,18 +35,20 @@ export interface MediaView {
   readonly panes: ReadonlyMap<MediaPanelTab, HTMLElement>;
   readonly searchInput: HTMLInputElement;
   readonly importButton: HTMLButtonElement;
-  readonly selectionBar: HTMLElement; // ← TAMBAH
-  readonly selectionCount: HTMLElement; // ← TAMBAH
-  readonly deleteSelectionBtn: HTMLButtonElement; // ← TAMBAH
+  readonly selectionBar: HTMLElement;
+  readonly selectionCount: HTMLElement;
+  readonly deleteSelectionBtn: HTMLButtonElement;
   readonly binContainer: HTMLElement;
   readonly fxContainer: HTMLElement;
   readonly trContainer: HTMLElement;
+  readonly animContainer: HTMLElement;
 }
 
 const TAB_DEFS: ReadonlyArray<{ id: MediaPanelTab; label: string }> = [
   { id: "media-bin", label: "Media" },
   { id: "media-fx", label: "Effects" },
   { id: "media-tr", label: "Transitions" },
+  { id: "media-anim", label: "Animations" },
 ];
 
 export function renderMediaView(state: AppState): MediaView {
@@ -127,6 +133,13 @@ export function renderMediaView(state: AppState): MediaView {
   panes.set("media-tr", trPane);
   body.append(trPane);
 
+  const animPane = el("div");
+  animPane.dataset["pane"] = "media-anim";
+  const animContainer = el("div");
+  animPane.append(animContainer);
+  panes.set("media-anim", animPane);
+  body.append(animPane);
+
   panes.forEach((pane, id) => {
     pane.hidden = id !== state.ui.media.activeTab;
   });
@@ -145,6 +158,7 @@ export function renderMediaView(state: AppState): MediaView {
     binContainer,
     fxContainer,
     trContainer,
+    animContainer,
   };
 }
 
@@ -425,6 +439,58 @@ function renderListItem(entry: ListEntry): HTMLElement {
   textWrap.append(
     el("div", { className: "li-name", text: entry.name }),
     el("div", { className: "li-sub", text: entry.sub }),
+  );
+
+  item.append(swatch, textWrap);
+  return item;
+}
+
+/* ============================================================
+   ANIMATION PANE (F14af)
+   ============================================================ */
+
+export function renderAnimationsPane(
+  container: HTMLElement,
+  query: string,
+  activeClip: Clip | undefined,
+): void {
+  clear(container);
+
+  const filtered = filterListEntries(ANIMATION_DEFINITIONS, query);
+  if (filtered.length === 0) {
+    container.append(
+      el("div", { className: "bin-empty", text: "No items match search" }),
+    );
+    return;
+  }
+
+  const currentKind = activeClip?.animation?.kind ?? null;
+  container.append(renderBinLabel("Animations", filtered.length));
+
+  for (const def of filtered) {
+    container.append(renderAnimationItem(def, def.kind === currentKind));
+  }
+}
+
+function renderAnimationItem(
+  def: AnimationDef,
+  isActive: boolean,
+): HTMLElement {
+  const item = el("div", {
+    className: `list-item${isActive ? " active" : ""}`,
+    attrs: { draggable: "true" },
+  });
+  item.dataset["animationKind"] = def.kind;
+  item.dataset["itemName"] = def.name;
+
+  const swatch = el("div", {
+    className: `swatch ${getGradientClass(def.gradientIndex - 1)}`,
+  });
+
+  const textWrap = el("div");
+  textWrap.append(
+    el("div", { className: "li-name", text: def.name }),
+    el("div", { className: "li-sub", text: def.sub }),
   );
 
   item.append(swatch, textWrap);

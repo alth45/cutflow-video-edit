@@ -6,6 +6,7 @@ import {
   renderMediaBin,
   renderEffectsPane,
   renderTransitionsPane,
+  renderAnimationsPane,
   type MediaView,
 } from "./media.view";
 import { attachMediaController } from "./media.controller";
@@ -35,6 +36,8 @@ export function mountMedia(container: HTMLElement): () => void {
     const selectionChanged =
       state.selection.selectedClipIds !== prev.selection.selectedClipIds;
     const effectsChanged = activeClip?.effects !== prevActiveClip?.effects;
+    const animationChanged =
+      activeClip?.animation !== prevActiveClip?.animation;
 
     if (tabChanged) syncActiveTab(view, state);
     if (
@@ -72,6 +75,13 @@ export function mountMedia(container: HTMLElement): () => void {
       renderEffectsPane(
         view.fxContainer,
         state.project.mediaAssets,
+        state.ui.media.searchQuery,
+        activeClip,
+      );
+    }
+    if (selectionChanged || animationChanged) {
+      renderAnimationsPane(
+        view.animContainer,
         state.ui.media.searchQuery,
         activeClip,
       );
@@ -115,6 +125,7 @@ function renderAllPanes(view: MediaView, state: AppState): void {
     selectedAssets,
   );
   renderTransitionsPane(view.trContainer, assets, query, selectedAssets);
+  renderAnimationsPane(view.animContainer, query, activeClip);
   updateSelectionBar(view, state);
 }
 

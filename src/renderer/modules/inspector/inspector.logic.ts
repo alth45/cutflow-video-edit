@@ -16,6 +16,8 @@ import type {
   ClipColor,
   ClipAudio,
 } from "@shared/types/timeline";
+import type { KeyframeableTransformKey } from "@shared/types/timeline";
+
 /* ---------- Formatters ---------- */
 
 export type ValueFormatter = (value: number) => string;
@@ -51,6 +53,7 @@ export interface SliderRow {
   readonly transformKey?: keyof ClipTransform;
   readonly colorKey?: keyof ClipColor;
   readonly audioKey?: keyof ClipAudio;
+  readonly keyframeKey?: KeyframeableTransformKey;
   readonly disabled?: boolean;
 }
 
@@ -101,6 +104,7 @@ export const INSPECTOR_TABS: readonly TabDef[] = [
             defaultValue: 0,
             format: fmt.plain,
             transformKey: "positionX",
+            keyframeKey: "positionX",
           },
           {
             kind: "slider",
@@ -110,6 +114,7 @@ export const INSPECTOR_TABS: readonly TabDef[] = [
             defaultValue: 0,
             format: fmt.plain,
             transformKey: "positionY",
+            keyframeKey: "positionY",
           },
           {
             kind: "slider",
@@ -119,6 +124,7 @@ export const INSPECTOR_TABS: readonly TabDef[] = [
             defaultValue: 100,
             format: fmt.percent,
             transformKey: "scale",
+            keyframeKey: "scale",
           },
           {
             kind: "slider",
@@ -128,6 +134,7 @@ export const INSPECTOR_TABS: readonly TabDef[] = [
             defaultValue: 0,
             format: fmt.degrees,
             transformKey: "rotation",
+            keyframeKey: "rotation",
           },
           {
             kind: "slider",
@@ -137,6 +144,7 @@ export const INSPECTOR_TABS: readonly TabDef[] = [
             defaultValue: 100,
             format: fmt.percent,
             transformKey: "opacity",
+            keyframeKey: "opacity",
           },
         ],
       },

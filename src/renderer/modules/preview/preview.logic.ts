@@ -1,5 +1,6 @@
 import type { AppState } from "@shared/types/state";
 import type { Clip, Track } from "@shared/types/timeline";
+import { DEFAULT_CLIP_AUDIO } from "@shared/types/timeline";
 
 /* ============================================================
    PREVIEW COMPOSITING LOGIC — pure
@@ -202,4 +203,23 @@ function resolveVisualType(clip: Clip, state: AppState): VisualType {
 
 export function sequenceHasAnyClip(state: AppState): boolean {
   return state.project.sequence.tracks.some((t) => t.clips.length > 0);
+}
+
+/**
+ * Volume efektif clip pada local time tertentu, dengan fade
+ * envelope. Return 0..1 (linear). Muted di-handle terpisah.
+ */
+export function computeClipVolume(clip: Clip, localTimeSec: number): number {
+  const audio = clip.audio ?? DEFAULT_CLIP_AUDIO;
+  let vol = audio.volume / 100;
+
+  const dur = clip.durationSec;
+  if (audio.fadeInSec > 0 && localTimeSec < audio.fadeInSec) {
+    vol *= localTimeSec / audio.fadeInSec;
+  }
+  if (audio.fadeOutSec > 0 && localTimeSec > dur - audio.fadeOutSec) {
+    vol *= (dur - localTimeSec) / audio.fadeOutSec;
+  }
+
+  return Math.max(0, Math.min(1, vol));
 }

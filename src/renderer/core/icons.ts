@@ -39,8 +39,10 @@ import {
   Underline,
   Square,
   Circle,
+  Diamond,
   createElement,
   type IconNode,
+  DiamondMinus,
 } from "lucide";
 /* ============================================================
    ICONS — LUCIDE REGISTRY
@@ -107,6 +109,7 @@ const ICONS = {
   underline: Underline, // ← TAMBAH
   stroke: Square, // ← TAMBAH (outlined box = stroke)
   outline: Circle, // ← TAMBAH (empty ring = outline only)
+  diamond: Diamond,
   /* Feedback */
   info: Info,
   check: Check,

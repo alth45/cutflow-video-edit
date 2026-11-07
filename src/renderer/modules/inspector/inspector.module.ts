@@ -17,6 +17,11 @@ import {
 } from "./inspector.view";
 import { attachInspectorController } from "./inspector.controller";
 import { sliderPercent } from "./inspector.logic";
+import { setKeyframeBtnState } from "./inspector.view";
+import {
+  hasKeyframes,
+  findKeyframeAt,
+} from "@modules/keyframes/keyframe.logic";
 
 export function mountInspector(container: HTMLElement): () => void {
   const initial = appStore.getState();
@@ -45,6 +50,19 @@ export function mountInspector(container: HTMLElement): () => void {
         activeClip.audio !== prevActiveClip?.audio)
     ) {
       syncClipPropertiesFromClip(view, activeClip);
+    }
+
+    /* Sync keyframe diamond state: selection, transform, playhead. */
+    const playheadMoved =
+      state.playback.currentTimeSec !== prev.playback.currentTimeSec;
+    if (
+      activeClip &&
+      (playheadMoved ||
+        activeClip.transform !== prevActiveClip?.transform ||
+        activeClip.keyframes !== prevActiveClip?.keyframes ||
+        activeClip.id !== prevActiveClip?.id)
+    ) {
+      syncKeyframeButtons(view, state, activeClip);
     }
 
     /* Tab switch */
@@ -126,5 +144,34 @@ function syncClipPropertiesFromClip(view: InspectorView, clip: Clip): void {
       button.classList.toggle("on", on);
       button.setAttribute("aria-pressed", String(on));
     }
+  }
+}
+
+function syncKeyframeButtons(
+  view: InspectorView,
+  state: AppState,
+  clip: Clip,
+): void {
+  const localTime = Math.max(
+    0,
+    Math.min(clip.durationSec, state.playback.currentTimeSec - clip.startSec),
+  );
+
+  for (const ref of view.sliders.values()) {
+    const btn = ref.keyframeBtn;
+    if (!btn) continue;
+    const key = ref.def.keyframeKey;
+    if (!key) continue;
+
+    if (!hasKeyframes(clip, key)) {
+      setKeyframeBtnState(btn, "none");
+      btn.title = "Add keyframe at playhead";
+      continue;
+    }
+
+    const kfs = clip.keyframes?.[key];
+    const atPlayhead = !!findKeyframeAt(kfs, localTime);
+    setKeyframeBtnState(btn, atPlayhead ? "at" : "has");
+    btn.title = atPlayhead ? "Remove keyframe" : "Add keyframe at playhead";
   }
 }

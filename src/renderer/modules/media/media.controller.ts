@@ -3,7 +3,7 @@ import * as actions from "@state/actions";
 import { appStore } from "@state/appStore";
 import type { MediaView } from "./media.view";
 import { eventBus } from "@core/events";
-import type { EffectKind } from "@shared/types/timeline";
+import type { EffectKind, AnimationKind } from "@shared/types/timeline";
 import { deleteMediaAssetsFlow } from "../../app/flows";
 
 export interface MediaControllerCallbacks {
@@ -133,6 +133,30 @@ export function attachMediaController(
           return;
         }
         actions.addEffectToClip(selectedId, kind);
+      },
+    ),
+  );
+
+  /* ---- Click animation → apply / toggle ---- */
+  cleanups.push(
+    delegate(
+      view.animContainer,
+      "click",
+      ".list-item[data-animation-kind]",
+      (ev, item) => {
+        ev.stopPropagation();
+        const kind = (item as HTMLElement).dataset["animationKind"] as
+          | AnimationKind
+          | undefined;
+        if (!kind) return;
+
+        const state = appStore.getState();
+        const selectedId = state.selection.selectedClipIds[0];
+        if (!selectedId) {
+          toast("Select a clip first", "warning");
+          return;
+        }
+        actions.toggleClipAnimation(selectedId, kind);
       },
     ),
   );

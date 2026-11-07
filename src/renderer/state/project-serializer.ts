@@ -108,7 +108,8 @@ export function parseProject(json: string): ParseProjectResult {
             patched["audio"] = { ...DEFAULT_CLIP_AUDIO, ...existingAudio };
           }
           if (!patched["effects"]) patched["effects"] = [];
-
+          if (!patched["keyframes"]) patched["keyframes"] = {};
+          if (!("animation" in patched)) patched["animation"] = null;
           /* Text clip backward compat: normalize missing style. */
           const source = patched["source"];
           if (

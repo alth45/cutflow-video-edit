@@ -863,3 +863,98 @@
     transform: translateX(-4px);
   }
 }
+
+/* ============================================================
+   CLIP KEYFRAME MARKERS (F14ae — enhanced)
+   ============================================================ */
+/* ============================================================
+   CLIP KEYFRAME MARKERS
+   ------------------------------------------------------------
+   Diamond kuning di bottom strip clip. `clamp()` positioning
+   (dari JS) memastikan marker tidak terpotong overflow:hidden.
+   z-index tinggi memastikan di atas waveform + film strip.
+   ============================================================ */
+.clip-keyframe-layer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 14px;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.clip-keyframe-marker {
+  position: absolute;
+  bottom: 2px;
+  width: 10px;
+  height: 10px;
+  /* Offset horizontal: -5px agar clamp 5px pusatkan di edge. */
+  margin-left: -5px;
+  background: #ffd600;
+  border: 1.5px solid rgba(0, 0, 0, 0.85);
+  transform: rotate(45deg);
+  border-radius: 1.5px;
+  box-shadow:
+    0 0 6px rgba(255, 214, 0, 0.95),
+    0 1px 2px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+  pointer-events: auto;
+  cursor: pointer;
+  transition: transform var(--duration-fast) ease-out;
+  transform-origin: center center;
+}
+
+.clip-keyframe-marker:hover {
+  transform: rotate(45deg) scale(1.35);
+  z-index: 2;
+}
+
+/* Clip selected → marker lebih terang */
+.clip.selected .clip-keyframe-marker {
+  background: #ffe040;
+  box-shadow:
+    0 0 8px rgba(255, 224, 64, 1),
+    0 1px 2px rgba(0, 0, 0, 0.7),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+/* ============================================================
+   KEYFRAME TOOLBAR BUTTON (F14ae)
+   ============================================================ */
+.icon-btn.kf-none {
+  color: var(--muted-2);
+  opacity: 0.6;
+}
+
+.icon-btn.kf-none:not(:disabled):hover {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.icon-btn.kf-has {
+  color: #f5d500;
+  opacity: 1;
+}
+
+.icon-btn.kf-has:hover {
+  background: rgba(245, 213, 0, 0.12);
+  color: #f5d500;
+}
+
+.icon-btn.kf-at {
+  color: #f5d500;
+  opacity: 1;
+  background: rgba(245, 213, 0, 0.18);
+  box-shadow: 0 0 0 1px rgba(245, 213, 0, 0.5);
+}
+
+.icon-btn.kf-at:hover {
+  background: rgba(245, 213, 0, 0.28);
+}
+
+.icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
