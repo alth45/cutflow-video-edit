@@ -178,6 +178,7 @@ export interface ClipEffect {
    conflict — shake + spin = bentrok).
    ============================================================ */
 export type AnimationKind =
+  /* General — berlaku semua clip kind */
   | "shake"
   | "glitch"
   | "pulse"
@@ -187,7 +188,20 @@ export type AnimationKind =
   | "flash"
   | "wave"
   | "zoom"
-  | "float";
+  | "float"
+  | "blur-in"
+  | "slide-in"
+  | "flicker"
+  | "wobble"
+  | "heartbeat"
+  | "glow"
+  | "rainbow"
+  | "tilt"
+  /* Text-specific */
+  | "typewriter"
+  | "neon-text";
+
+export type AnimationCategory = "general" | "text";
 
 export interface ClipAnimation {
   readonly kind: AnimationKind;

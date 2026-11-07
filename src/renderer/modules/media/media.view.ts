@@ -449,6 +449,10 @@ function renderListItem(entry: ListEntry): HTMLElement {
    ANIMATION PANE (F14af)
    ============================================================ */
 
+/* ============================================================
+   ANIMATION PANE (F14af + F14ai)
+   ============================================================ */
+
 export function renderAnimationsPane(
   container: HTMLElement,
   query: string,
@@ -456,7 +460,20 @@ export function renderAnimationsPane(
 ): void {
   clear(container);
 
-  const filtered = filterListEntries(ANIMATION_DEFINITIONS, query);
+  const clipKind = activeClip?.kind;
+
+  /* Filter by category:
+     - No clip → all (exploration mode)
+     - Text clip → all (general + text)
+     - Video/image clip → only general */
+  const available = ANIMATION_DEFINITIONS.filter((def) => {
+    if (def.category === "text" && activeClip && clipKind !== "text") {
+      return false;
+    }
+    return true;
+  });
+
+  const filtered = filterListEntries(available, query);
   if (filtered.length === 0) {
     container.append(
       el("div", { className: "bin-empty", text: "No items match search" }),
@@ -465,7 +482,10 @@ export function renderAnimationsPane(
   }
 
   const currentKind = activeClip?.animation?.kind ?? null;
-  container.append(renderBinLabel("Animations", filtered.length));
+  const label = activeClip
+    ? `Animations (${filtered.length})`
+    : `Animations (${filtered.length})`;
+  container.append(renderBinLabel(label, filtered.length));
 
   for (const def of filtered) {
     container.append(renderAnimationItem(def, def.kind === currentKind));

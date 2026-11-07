@@ -169,3 +169,228 @@
 .clip-anim-float {
   animation: cf-float 2s ease-in-out infinite;
 }
+
+/* ============================================================
+   ANIMATION PACK #2 (F14ai)
+   ------------------------------------------------------------
+   Semua keyframe ditambahkan. Class `.clip-anim-*` diterapkan
+   ke `.preview-clip-content`. Untuk text-specific, CSS menarget
+   descendant `.preview-text` — otomatis no-op untuk video/image
+   (tidak ada `.preview-text` child).
+   ============================================================ */
+
+/* ---------- Blur In ---------- */
+@keyframes cf-blur-in {
+  0% {
+    filter: blur(12px);
+    opacity: 0;
+  }
+  20% {
+    filter: blur(0);
+    opacity: 1;
+  }
+  80% {
+    filter: blur(0);
+    opacity: 1;
+  }
+  100% {
+    filter: blur(12px);
+    opacity: 0;
+  }
+}
+.clip-anim-blur-in {
+  animation: cf-blur-in 2s ease-in-out infinite;
+}
+
+/* ---------- Slide In ---------- */
+@keyframes cf-slide-in {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  15% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  85% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+.clip-anim-slide-in {
+  animation: cf-slide-in 2s ease-in-out infinite;
+}
+
+/* ---------- Flicker (neon) ---------- */
+@keyframes cf-flicker {
+  0%,
+  19.5%,
+  21%,
+  23%,
+  25%,
+  54%,
+  56%,
+  100% {
+    opacity: 1;
+  }
+  20%,
+  22%,
+  24%,
+  55% {
+    opacity: 0.25;
+  }
+}
+.clip-anim-flicker {
+  animation: cf-flicker 3s linear infinite;
+}
+
+/* ---------- Wobble ---------- */
+@keyframes cf-wobble {
+  0%,
+  100% {
+    transform: rotate(0deg) skewX(0deg);
+  }
+  25% {
+    transform: rotate(-2deg) skewX(-3deg);
+  }
+  75% {
+    transform: rotate(2deg) skewX(3deg);
+  }
+}
+.clip-anim-wobble {
+  animation: cf-wobble 1.2s ease-in-out infinite;
+}
+
+/* ---------- Heartbeat ---------- */
+@keyframes cf-heartbeat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  15% {
+    transform: scale(1.15);
+  }
+  30% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.12);
+  }
+  60% {
+    transform: scale(1);
+  }
+}
+.clip-anim-heartbeat {
+  animation: cf-heartbeat 1.5s ease-in-out infinite;
+}
+
+/* ---------- Glow ---------- */
+@keyframes cf-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px rgba(255, 200, 80, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(255, 200, 80, 0.95));
+  }
+}
+.clip-anim-glow {
+  animation: cf-glow 2s ease-in-out infinite;
+}
+
+/* ---------- Rainbow (hue rotate) ---------- */
+@keyframes cf-rainbow {
+  from {
+    filter: hue-rotate(0deg);
+  }
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+.clip-anim-rainbow {
+  animation: cf-rainbow 4s linear infinite;
+}
+
+/* ---------- Tilt (subtle rotate sway) ---------- */
+@keyframes cf-tilt {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+.clip-anim-tilt {
+  animation: cf-tilt 2s ease-in-out infinite;
+}
+
+/* ============================================================
+   TEXT-SPECIFIC
+   ============================================================ */
+
+/* ---------- Typewriter ---------- */
+/* clip-path inset reveals left-to-right. steps() = discrete
+   typing effect. Cursor = ::after '|' with blink. */
+@keyframes cf-typewriter-reveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes cf-typewriter-cursor {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+.clip-anim-typewriter .preview-text {
+  display: inline-block;
+  animation: cf-typewriter-reveal 3s steps(30) infinite;
+  /* Override text-align inline — parent flex sudah centering. */
+  will-change: clip-path;
+}
+.clip-anim-typewriter .preview-text::after {
+  content: "|";
+  display: inline-block;
+  margin-left: 3px;
+  animation: cf-typewriter-cursor 0.7s steps(2) infinite;
+  font-weight: 400;
+  /* Hilangkan shadow di cursor — hanya teks yang shadow. */
+  text-shadow: none;
+}
+
+/* ---------- Neon Text ---------- */
+@keyframes cf-neon-text {
+  0%,
+  100% {
+    text-shadow:
+      0 0 4px rgba(255, 255, 255, 0.9),
+      0 0 8px rgba(0, 255, 255, 0.9),
+      0 0 16px rgba(0, 255, 255, 0.7);
+  }
+  50% {
+    text-shadow:
+      0 0 8px rgba(255, 255, 255, 1),
+      0 0 20px rgba(0, 255, 255, 1),
+      0 0 32px rgba(0, 255, 255, 0.9),
+      0 0 48px rgba(0, 255, 255, 0.6);
+  }
+}
+/* Animation di .preview-text (bukan content) supaya text-shadow
+   override inline text-shadow dari applyTextClipStyle. */
+.clip-anim-neon-text .preview-text {
+  animation: cf-neon-text 1.5s ease-in-out infinite;
+  /* Warna fill neon — cyan terang. */
+  color: #e0ffff;
+}
