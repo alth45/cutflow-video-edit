@@ -146,6 +146,26 @@ export const DEFAULT_CLIP_AUDIO: ClipAudio = Object.freeze({
 });
 
 /* ============================================================
+   CHROMA KEY (F14ak)
+   ------------------------------------------------------------
+   Green screen removal. Preview = SVG filter (real-time).
+   Export = canvas pixel manipulation (frame-accurate).
+
+   Similarity: 0-100. Higher = remove more greenish pixels.
+   ============================================================ */
+export interface ClipChromaKey  {
+  readonly enabled: boolean;
+  readonly keyColor: "green" | "blue";
+  readonly similarity: number; // 0..100
+}
+
+export const DEFAULT_CHROMA_KEY: ClipChromaKey = Object.freeze({
+  enabled: false,
+  keyColor: "green",
+  similarity: 50,
+});
+
+/* ============================================================
    CLIP EFFECT (F14aa)
    ------------------------------------------------------------
    Effect yang di-apply pada clip. Params fleksibel per-kind
@@ -153,6 +173,7 @@ export const DEFAULT_CLIP_AUDIO: ClipAudio = Object.freeze({
    ============================================================ */
 
 export type EffectKind =
+  /* --- Filter primitives --- */
   | "blur"
   | "grayscale"
   | "sepia"
@@ -161,6 +182,17 @@ export type EffectKind =
   | "saturate"
   | "hue-rotate"
   | "invert"
+  | "drop-shadow"
+  /* --- Filter presets (combinations) --- */
+  | "vintage"
+  | "cinematic"
+  | "dreamy"
+  | "noir"
+  | "punch"
+  | "faded"
+  | "warm"
+  | "cool"
+  /* --- Overlay (handled via ::after) --- */
   | "vignette";
 
 export interface ClipEffect {
@@ -333,6 +365,7 @@ interface ClipBase {
   readonly effects: readonly ClipEffect[];
   readonly keyframes: KeyframeMap;
   readonly animation: ClipAnimation | null;
+  readonly chromaKey: ClipChromaKey;
 }
 
 /**

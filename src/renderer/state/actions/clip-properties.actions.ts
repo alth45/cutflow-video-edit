@@ -12,6 +12,9 @@ import type {
 } from "@shared/types/timeline";
 import { withProject } from "./helpers";
 
+import { DEFAULT_CHROMA_KEY } from "@shared/types/timeline";
+import type { ClipChromaKey } from "@shared/types/timeline";
+
 function patchClip(clipId: string, updater: (clip: Clip) => Clip | null): void {
   appStore.setState((state) => {
     for (const track of state.project.sequence.tracks) {
@@ -93,5 +96,18 @@ export function setClipAudioProperty<K extends keyof ClipAudio>(
     const current = clip.audio ?? DEFAULT_CLIP_AUDIO;
     if (current[key] === value) return null;
     return { ...clip, audio: { ...current, [key]: value } };
+  });
+}
+
+
+ export function setClipChromaKey<K extends keyof ClipChromaKey>(
+  clipId: string,
+  key: K,
+  value: ClipChromaKey[K],
+): void {
+  patchClip(clipId, (clip) => {
+    const current = clip.chromaKey ?? DEFAULT_CHROMA_KEY;
+    if (current[key] === value) return null;
+    return { ...clip, chromaKey: { ...current, [key]: value } };
   });
 }

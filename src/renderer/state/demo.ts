@@ -7,7 +7,9 @@ import {
   DEFAULT_CLIP_COLOR,
   DEFAULT_CLIP_AUDIO,
   DEFAULT_TEXT_STYLE, // ← TAMBAH
-} from "@shared/types/timeline"; /* ============================================================
+} from "@shared/types/timeline";
+import { DEFAULT_CHROMA_KEY } from "@shared/types/timeline";
+/* ============================================================
    DEMO SEEDING (DEV ONLY)
    ------------------------------------------------------------
    Mengisi state dengan data demo saat dev mode. Idempotent:
@@ -211,7 +213,8 @@ function buildClip(
     audio: DEFAULT_CLIP_AUDIO,
     effects: [],
     keyframes: {},
-    animation: null, 
+    animation: null,
+    chromaKey: DEFAULT_CHROMA_KEY, // ← TAMBAH
   };
 
   switch (spec.kind) {

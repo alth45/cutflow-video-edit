@@ -3,10 +3,15 @@ import * as actions from "@state/actions";
 import { appStore } from "@state/appStore";
 import { getClipById } from "@state/selectors";
 import type { InspectorPanelTab } from "@shared/types/state";
-import type { Clip, KeyframeableTransformKey } from "@shared/types/timeline";
+import type {
+  Clip,
+  KeyframeableTransformKey,
+  ClipChromaKey,
+} from "@shared/types/timeline";
 import {
   DEFAULT_CLIP_TRANSFORM,
   DEFAULT_CLIP_AUDIO,
+  DEFAULT_CHROMA_KEY,
 } from "@shared/types/timeline";
 import { sliderPercent } from "./inspector.logic";
 import type { InspectorView } from "./inspector.view";
@@ -89,6 +94,8 @@ export function attachInspectorController(view: InspectorView): () => void {
         actions.setClipTransformProperty(clip.id, ref.def.transformKey, value);
       } else if (ref.def.colorKey) {
         actions.setClipColorProperty(clip.id, ref.def.colorKey, value);
+      } else if (ref.def.chromaKey) {
+        actions.setClipChromaKey(clip.id, ref.def.chromaKey, value);
       } else if (ref.def.audioKey) {
         actions.setClipAudioProperty(clip.id, ref.def.audioKey, value);
       }
@@ -126,10 +133,46 @@ export function attachInspectorController(view: InspectorView): () => void {
         return;
       }
 
+      if (ref.def.chromaKey) {
+        const clip = getActiveClipFromStore();
+        if (!clip) return;
+        const current = (clip.chromaKey ?? DEFAULT_CHROMA_KEY)[
+          ref.def.chromaKey
+        ];
+        actions.setClipChromaKey(clip.id, ref.def.chromaKey, !current);
+        return;
+      }
+
       /* Unbound (placeholder): local toggle only. */
       const isOn = button.classList.toggle("on");
       button.setAttribute("aria-pressed", String(isOn));
     }),
+  );
+
+  /* ---- Segmented control (chroma key color) ---- */
+  cleanups.push(
+    delegate(
+      view.root,
+      "click",
+      ".segmented-btn[data-chroma-key]",
+      (ev, btn) => {
+        ev.stopPropagation();
+        const key = (btn as HTMLElement).dataset["chromaKey"] as
+          | "keyColor"
+          | undefined;
+        const value = (btn as HTMLElement).dataset["value"];
+        if (!key || !value) return;
+
+        const clip = getActiveClipFromStore();
+        if (!clip) return;
+
+        actions.setClipChromaKey(
+          clip.id,
+          key,
+          value as ClipChromaKey["keyColor"],
+        );
+      },
+    ),
   );
 
   /* ---- Keyframe diamond button ---- */

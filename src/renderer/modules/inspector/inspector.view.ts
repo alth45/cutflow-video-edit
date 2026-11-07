@@ -15,13 +15,15 @@ import type {
   ClipTransform,
   ClipColor,
   ClipAudio,
+  ClipChromaKey,
 } from "@shared/types/timeline";
 import {
   DEFAULT_CLIP_TRANSFORM,
   DEFAULT_CLIP_COLOR,
   DEFAULT_CLIP_AUDIO,
+  DEFAULT_CHROMA_KEY,
 } from "@shared/types/timeline";
-
+import { type SegmentedRow } from "./inspector.logic";
 export interface SliderRef {
   readonly input: HTMLInputElement;
   readonly valueEl: HTMLElement;
@@ -189,6 +191,8 @@ function renderRow(
       return renderSliderRow(row, activeClip, slidersOut);
     case "switch":
       return renderSwitchRow(row, activeClip, switchesOut);
+    case "segmented":
+      return renderSegmentedRow(row, activeClip);
     case "curve":
       return renderCurveRow();
   }
@@ -221,6 +225,15 @@ function readAudioValue<K extends keyof ClipAudio>(
   return (activeClip.audio ?? DEFAULT_CLIP_AUDIO)[key];
 }
 
+function readChromaValue<K extends keyof ClipChromaKey>(
+  activeClip: Clip | undefined,
+  key: K,
+  fallback: ClipChromaKey[K],
+): ClipChromaKey[K] {
+  if (!activeClip) return fallback;
+  return (activeClip.chromaKey ?? DEFAULT_CHROMA_KEY)[key];
+}
+
 function renderSliderRow(
   row: SliderRow,
   activeClip: Clip | undefined,
@@ -249,6 +262,12 @@ function renderSliderRow(
     currentValue = readAudioValue(
       activeClip,
       row.audioKey,
+      row.defaultValue,
+    ) as number;
+  } else if (row.chromaKey) {
+    currentValue = readChromaValue(
+      activeClip,
+      row.chromaKey,
       row.defaultValue,
     ) as number;
   }
@@ -313,6 +332,8 @@ function renderSwitchRow(
     );
   } else if (row.audioKey) {
     on = Boolean(readAudioValue(activeClip, row.audioKey, row.defaultOn));
+  } else if (row.chromaKey) {
+    on = Boolean(readChromaValue(activeClip, row.chromaKey, row.defaultOn));
   }
 
   const sw = el("button", {
@@ -348,4 +369,31 @@ export function setKeyframeBtnState(
 ): void {
   btn.classList.remove("kf-none", "kf-has", "kf-at");
   btn.classList.add(`kf-${state}`);
+}
+
+function renderSegmentedRow(
+  row: SegmentedRow,
+  activeClip: Clip | undefined,
+): HTMLElement {
+  const wrap = el("div", { className: "row segmented-row" });
+  wrap.append(el("label", { text: row.label }));
+
+  const seg = el("div", { className: "segmented" });
+  const current = String(
+    readChromaValue(activeClip, row.chromaKey, row.defaultValue),
+  );
+
+  for (const opt of row.options) {
+    const btn = el("button", {
+      className: `segmented-btn${opt.value === current ? " active" : ""}`,
+      text: opt.label,
+    });
+    btn.type = "button";
+    btn.dataset["chromaKey"] = row.chromaKey;
+    btn.dataset["value"] = opt.value;
+    seg.append(btn);
+  }
+
+  wrap.append(seg, el("span", { className: "val" }));
+  return wrap;
 }

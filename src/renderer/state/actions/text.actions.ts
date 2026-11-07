@@ -10,6 +10,7 @@ import {
 } from "@shared/types/timeline";
 import type { TextClip, TextClipStyle } from "@shared/types/timeline";
 import { withAutoAdjust, withProject } from "./helpers";
+import { DEFAULT_CHROMA_KEY } from "@shared/types/timeline";
 
 const DEFAULT_TEXT_CLIP_DURATION_SEC = 5;
 
@@ -37,6 +38,7 @@ export function addTextClip(trackId: string, startSec: number): void {
       effects: [],
       keyframes: {},
       animation: null,
+      chromaKey: DEFAULT_CHROMA_KEY,
       source: { kind: "text", content: "Text", style: DEFAULT_TEXT_STYLE },
     };
 

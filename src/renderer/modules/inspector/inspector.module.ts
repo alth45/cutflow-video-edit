@@ -1,11 +1,12 @@
 import { setChildren } from "@core/Dom";
 import { appStore } from "@state/appStore";
 import type { AppState } from "@shared/types/state";
-import type { Clip } from "@shared/types/timeline";
+import type { Clip, ClipChromaKey } from "@shared/types/timeline";
 import {
   DEFAULT_CLIP_TRANSFORM,
   DEFAULT_CLIP_COLOR,
   DEFAULT_CLIP_AUDIO,
+  DEFAULT_CHROMA_KEY,
 } from "@shared/types/timeline";
 
 import { getActiveClip } from "@state/selectors";
@@ -22,6 +23,7 @@ import {
   hasKeyframes,
   findKeyframeAt,
 } from "@modules/keyframes/keyframe.logic";
+import { setClipChromaKey } from "@renderer/state/actions";
 
 export function mountInspector(container: HTMLElement): () => void {
   const initial = appStore.getState();
@@ -47,7 +49,8 @@ export function mountInspector(container: HTMLElement): () => void {
       activeClip &&
       (activeClip.transform !== prevActiveClip?.transform ||
         activeClip.color !== prevActiveClip?.color ||
-        activeClip.audio !== prevActiveClip?.audio)
+        activeClip.audio !== prevActiveClip?.audio ||
+        activeClip.keyframes !== prevActiveClip?.keyframes)
     ) {
       syncClipPropertiesFromClip(view, activeClip);
     }
@@ -103,11 +106,11 @@ function syncCollapsed(view: InspectorView, state: AppState): void {
     groupEl.classList.toggle("collapsed", collapsed.has(groupId));
   }
 }
-
 function syncClipPropertiesFromClip(view: InspectorView, clip: Clip): void {
   const transform = clip.transform ?? DEFAULT_CLIP_TRANSFORM;
   const color = clip.color ?? DEFAULT_CLIP_COLOR;
   const audio = clip.audio ?? DEFAULT_CLIP_AUDIO;
+  const chroma = clip.chromaKey ?? DEFAULT_CHROMA_KEY;
 
   for (const [input, ref] of view.sliders) {
     let value: number | null = null;
@@ -118,6 +121,8 @@ function syncClipPropertiesFromClip(view: InspectorView, clip: Clip): void {
       value = Number(color[ref.def.colorKey]);
     } else if (ref.def.audioKey) {
       value = Number(audio[ref.def.audioKey]);
+    } else if (ref.def.chromaKey) {
+      value = Number(chroma[ref.def.chromaKey]);
     }
 
     if (value === null) continue;
@@ -138,6 +143,8 @@ function syncClipPropertiesFromClip(view: InspectorView, clip: Clip): void {
       on = Boolean(transform[ref.def.transformKey]);
     } else if (ref.def.audioKey) {
       on = Boolean(audio[ref.def.audioKey]);
+    } else if (ref.def.chromaKey) {
+      on = Boolean(chroma[ref.def.chromaKey]);
     }
     if (on === null) continue;
     if (button.classList.contains("on") !== on) {
@@ -145,6 +152,7 @@ function syncClipPropertiesFromClip(view: InspectorView, clip: Clip): void {
       button.setAttribute("aria-pressed", String(on));
     }
   }
+  syncSegmentedButtons(view, clip);
 }
 
 function syncKeyframeButtons(
@@ -174,4 +182,14 @@ function syncKeyframeButtons(
     setKeyframeBtnState(btn, atPlayhead ? "at" : "has");
     btn.title = atPlayhead ? "Remove keyframe" : "Add keyframe at playhead";
   }
+}
+
+function syncSegmentedButtons(view: InspectorView, clip: Clip): void {
+  const chroma = clip.chromaKey ?? DEFAULT_CHROMA_KEY;
+  view.root
+    .querySelectorAll<HTMLButtonElement>(".segmented-btn[data-value]")
+    .forEach((btn) => {
+      const value = btn.dataset["value"];
+      btn.classList.toggle("active", value === chroma.keyColor);
+    });
 }

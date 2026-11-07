@@ -6,7 +6,7 @@ import {
   DEFAULT_CLIP_AUDIO,
   DEFAULT_TEXT_STYLE,
 } from "@shared/types/timeline";
-
+import { DEFAULT_CHROMA_KEY } from "@shared/types/timeline";
 /* ============================================================
    PROJECT SERIALIZER
    ------------------------------------------------------------
@@ -110,6 +110,9 @@ export function parseProject(json: string): ParseProjectResult {
           if (!patched["effects"]) patched["effects"] = [];
           if (!patched["keyframes"]) patched["keyframes"] = {};
           if (!("animation" in patched)) patched["animation"] = null;
+          if (!("chromaKey" in patched))
+            patched["chromaKey"] = DEFAULT_CHROMA_KEY;
+
           /* Text clip backward compat: normalize missing style. */
           const source = patched["source"];
           if (

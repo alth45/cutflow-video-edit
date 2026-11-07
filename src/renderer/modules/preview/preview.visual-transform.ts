@@ -10,7 +10,7 @@ import {
   buildFilterString,
   getVignetteStrength,
 } from "@modules/effects/effect.logic";
-
+import { ensureChromaFilter } from "./preview.chroma";
 /* ============================================================
    VISUAL TRANSFORM
    ------------------------------------------------------------
@@ -56,7 +56,15 @@ export function applyVisualTransform(
   }
 
   /* ---- Color correction + effects (combined filter) ---- */
-  wrapper.style.filter = buildFilterString(clip);
+  /* ---- Filter chain: chroma key first, then color + effects ---- */
+  const filterParts: string[] = [];
+  if (clip.chromaKey?.enabled) {
+    const id = ensureChromaFilter(clip.id, clip.chromaKey);
+    filterParts.push(`url(#${id})`);
+  }
+  const colorFx = buildFilterString(clip);
+  if (colorFx) filterParts.push(colorFx);
+  wrapper.style.filter = filterParts.join(" ") || "";
 
   /* ---- Vignette overlay ---- */
   const vignetteStrength = getVignetteStrength(clip);

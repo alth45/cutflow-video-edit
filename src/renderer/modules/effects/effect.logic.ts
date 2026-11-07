@@ -24,10 +24,19 @@ export function createDefaultEffect(kind: EffectKind): ClipEffect | null {
 }
 
 /** Map 1 effect ke CSS filter string (null untuk vignette — handled via overlay). */
+/**
+ * Convert one effect to CSS filter string.
+ * Return null untuk efek yang di-handle via overlay (vignette).
+ *
+ * Preset effects (`amount` 0-100) → t = amount/100 normalized,
+ * scale intensitas tiap sub-filter secara linear.
+ */
 function effectToFilterString(effect: ClipEffect): string | null {
   const amount = effect.params["amount"] ?? 0;
+  const t = amount / 100; // 0..1 (normalized intensity untuk preset)
 
   switch (effect.kind) {
+    /* ---- Filter primitives ---- */
     case "blur":
       return `blur(${amount}px)`;
     case "grayscale":
@@ -44,6 +53,77 @@ function effectToFilterString(effect: ClipEffect): string | null {
       return `hue-rotate(${amount}deg)`;
     case "invert":
       return `invert(${amount}%)`;
+
+    /* ---- New primitives ---- */
+    case "drop-shadow": {
+      const blur = 4 + t * 16; // 4..20px
+      const offsetY = 4 + t * 4; // 4..8px
+      const alpha = 0.3 + t * 0.6; // 0.3..0.9
+      return `drop-shadow(0 ${offsetY.toFixed(1)}px ${blur.toFixed(1)}px rgba(0,0,0,${alpha.toFixed(2)}))`;
+    }
+
+    /* ---- Presets (combinations) ---- */
+    case "vintage": {
+      /* Classic faded-photo look: muted + warm. */
+      const sepia = 20 + t * 30; // 20..50%
+      const contrast = 1 + t * 0.15; // 1.0..1.15
+      const brightness = 1 - t * 0.05; // 1.0..0.95
+      return `sepia(${sepia.toFixed(0)}%) contrast(${contrast.toFixed(3)}) brightness(${brightness.toFixed(3)})`;
+    }
+
+    case "cinematic": {
+      /* High contrast + saturated + slight warm. */
+      const contrast = 1 + t * 0.25; // 1.0..1.25
+      const saturate = 1 + t * 0.2; // 1.0..1.2
+      const hue = t * 5; // 0..5deg
+      return `contrast(${contrast.toFixed(3)}) saturate(${saturate.toFixed(3)}) hue-rotate(${hue.toFixed(1)}deg)`;
+    }
+
+    case "dreamy": {
+      /* Soft glow: bright + saturated + slight blur. */
+      const brightness = 1 + t * 0.1;
+      const saturate = 1 + t * 0.15;
+      const blur = t * 2; // 0..2px
+      return `brightness(${brightness.toFixed(3)}) saturate(${saturate.toFixed(3)}) blur(${blur.toFixed(1)}px)`;
+    }
+
+    case "noir": {
+      /* B&W cinema: full grayscale + high contrast + slightly dark. */
+      const contrast = 1 + t * 0.4;
+      const brightness = 1 - t * 0.1;
+      return `grayscale(100%) contrast(${contrast.toFixed(3)}) brightness(${brightness.toFixed(3)})`;
+    }
+
+    case "punch": {
+      /* Aggressive: high contrast + high saturate. */
+      const contrast = 1 + t * 0.4;
+      const saturate = 1 + t * 0.5;
+      return `contrast(${contrast.toFixed(3)}) saturate(${saturate.toFixed(3)})`;
+    }
+
+    case "faded": {
+      /* Muted film: low contrast + desaturated + brighter. */
+      const contrast = 1 - t * 0.2;
+      const saturate = 1 - t * 0.3;
+      const brightness = 1 + t * 0.1;
+      return `contrast(${contrast.toFixed(3)}) saturate(${saturate.toFixed(3)}) brightness(${brightness.toFixed(3)})`;
+    }
+
+    case "warm": {
+      /* Warm sunset tint: positive hue + saturated. */
+      const hue = t * 20; // 0..20deg toward orange/red
+      const saturate = 1 + t * 0.2;
+      return `hue-rotate(${hue.toFixed(1)}deg) saturate(${saturate.toFixed(3)})`;
+    }
+
+    case "cool": {
+      /* Cool blue tint: negative hue + slight saturate. */
+      const hue = -t * 20; // 0..-20deg toward blue
+      const saturate = 1 + t * 0.15;
+      return `hue-rotate(${hue.toFixed(1)}deg) saturate(${saturate.toFixed(3)})`;
+    }
+
+    /* ---- Overlay (handled elsewhere) ---- */
     case "vignette":
       return null;
   }

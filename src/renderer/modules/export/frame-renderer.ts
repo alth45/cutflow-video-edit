@@ -118,6 +118,7 @@ export async function drawFrame(
     ctx.filter = filterStr || "none";
 
     /* Draw content */
+    /* Draw content */
     if (clip.source.kind === "media") {
       const asset = getMediaById(state, clip.source.mediaId);
       if (asset && !asset.path.startsWith("/demo/")) {
@@ -125,7 +126,6 @@ export async function drawFrame(
         if (entry?.loaded) {
           const media = entry.element;
 
-          /* Seek video ke localTime (frame-accurate). */
           if (media instanceof HTMLVideoElement) {
             await seekVideo(media, localTimeSec);
           }
@@ -146,10 +146,46 @@ export async function drawFrame(
             let drawH = ctx.canvas.height;
             if (mediaRatio > canvasRatio) drawH = ctx.canvas.width / mediaRatio;
             else drawW = ctx.canvas.height * mediaRatio;
-            try {
-              ctx.drawImage(media, -drawW / 2, -drawH / 2, drawW, drawH);
-            } catch {
-              /* frame not ready */
+
+            if (clip.chromaKey?.enabled) {
+              /* Chroma path: render to temp canvas with transform+filter,
+                 apply pixel-level chroma key, paste to main. */
+              const tmp = document.createElement("canvas");
+              tmp.width = ctx.canvas.width;
+              tmp.height = ctx.canvas.height;
+              const tctx = tmp.getContext("2d", { willReadFrequently: true });
+              if (tctx) {
+                tctx.translate(cx, cy);
+                tctx.rotate((t.rotation * Math.PI) / 180);
+                tctx.scale(t.scale / 100, t.scale / 100);
+                tctx.filter = filterStr || "none";
+                try {
+                  tctx.drawImage(media, -drawW / 2, -drawH / 2, drawW, drawH);
+                } catch {
+                  /* skip */
+                }
+
+                const imgData = tctx.getImageData(0, 0, tmp.width, tmp.height);
+                applyChromaKeyPixels(imgData.data, clip.chromaKey);
+                tctx.putImageData(imgData, 0, 0);
+
+                /* Draw temp to main (transform already baked in). */
+                ctx.save();
+                ctx.filter = "none";
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                try {
+                  ctx.drawImage(tmp, 0, 0);
+                } catch {
+                  /* skip */
+                }
+                ctx.restore();
+              }
+            } else {
+              try {
+                ctx.drawImage(media, -drawW / 2, -drawH / 2, drawW, drawH);
+              } catch {
+                /* frame not ready */
+              }
             }
           }
         }
@@ -214,4 +250,33 @@ function seekVideo(video: HTMLVideoElement, time: number): Promise<void> {
       resolve();
     }
   });
+}
+
+/* ============================================================
+   CHROMA KEY — PIXEL MANIPULATION (export)
+   ============================================================ */
+
+function applyChromaKeyPixels(
+  data: Uint8ClampedArray,
+  chroma: { keyColor: "green" | "blue"; similarity: number },
+): void {
+  const similarity = chroma.similarity / 100; // 0..1
+  const isGreen = chroma.keyColor === "green";
+  const threshold = 0.8 - similarity * 0.5; // 0.3..0.8
+  const edgeRange = 0.1;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i]! / 255;
+    const g = data[i + 1]! / 255;
+    const b = data[i + 2]! / 255;
+
+    const keyDist = isGreen ? g - Math.max(r, b) : b - Math.max(r, g);
+
+    if (keyDist > threshold) {
+      data[i + 3] = 0;
+    } else if (keyDist > threshold - edgeRange) {
+      const ratio = (keyDist - (threshold - edgeRange)) / edgeRange;
+      data[i + 3] = Math.round(data[i + 3]! * (1 - ratio));
+    }
+  }
 }

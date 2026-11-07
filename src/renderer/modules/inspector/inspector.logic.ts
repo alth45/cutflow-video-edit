@@ -15,6 +15,7 @@ import type {
   ClipTransform,
   ClipColor,
   ClipAudio,
+  ClipChromaKey,
 } from "@shared/types/timeline";
 import type { KeyframeableTransformKey } from "@shared/types/timeline";
 
@@ -53,6 +54,7 @@ export interface SliderRow {
   readonly transformKey?: keyof ClipTransform;
   readonly colorKey?: keyof ClipColor;
   readonly audioKey?: keyof ClipAudio;
+  readonly chromaKey?: "similarity";
   readonly keyframeKey?: KeyframeableTransformKey;
   readonly disabled?: boolean;
 }
@@ -63,14 +65,26 @@ export interface SwitchRow {
   readonly defaultOn: boolean;
   readonly transformKey?: keyof ClipTransform;
   readonly audioKey?: keyof ClipAudio;
+  readonly chromaKey?: "enabled";
   readonly disabled?: boolean;
+}
+
+export interface SegmentedRow {
+  readonly kind: "segmented";
+  readonly label: string;
+  readonly options: ReadonlyArray<{
+    readonly value: string;
+    readonly label: string;
+  }>;
+  readonly defaultValue: "green" | "blue";
+  readonly chromaKey: "keyColor";
 }
 
 export interface CurveRow {
   readonly kind: "curve";
 }
 
-export type RowDef = SliderRow | SwitchRow | CurveRow;
+export type RowDef = SliderRow | SwitchRow | SegmentedRow | CurveRow;
 
 export interface GroupDef {
   /** ID unik global (di-namespace per tab: `video:transform`). */
@@ -202,6 +216,37 @@ export const INSPECTOR_TABS: readonly TabDef[] = [
             label: "Optical Flow",
             defaultOn: true,
             disabled: true,
+          },
+        ],
+      },
+      {
+        id: "video:chroma",
+        label: "Chroma Key",
+        rows: [
+          {
+            kind: "switch",
+            label: "Enable",
+            defaultOn: false,
+            chromaKey: "enabled",
+          },
+          {
+            kind: "segmented",
+            label: "Color",
+            options: [
+              { value: "green", label: "Green" },
+              { value: "blue", label: "Blue" },
+            ],
+            defaultValue: "green",
+            chromaKey: "keyColor",
+          },
+          {
+            kind: "slider",
+            label: "Similarity",
+            min: 0,
+            max: 100,
+            defaultValue: 50,
+            format: fmt.plain,
+            chromaKey: "similarity",
           },
         ],
       },

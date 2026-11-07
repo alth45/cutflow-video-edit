@@ -6,7 +6,9 @@ import {
   DEFAULT_CLIP_TRANSFORM,
   DEFAULT_CLIP_COLOR,
   DEFAULT_CLIP_AUDIO,
-} from "@shared/types/timeline"; /* ============================================================
+} from "@shared/types/timeline";
+import { DEFAULT_CHROMA_KEY } from "@shared/types/timeline";
+/* ============================================================
    DROP LOGIC — pure functions
    ------------------------------------------------------------
    Mapping asset → clip dengan default duration, warna
@@ -117,6 +119,7 @@ export function buildClipFromAsset(asset: MediaAsset, startSec: number): Clip {
     effects: [],
     keyframes: {},
     animation: null,
+    chromaKey: DEFAULT_CHROMA_KEY, // ← TAMBAH
   };
 
   if (kind === "audio") {

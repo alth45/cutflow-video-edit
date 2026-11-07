@@ -27,6 +27,9 @@ export interface EffectDef {
 }
 
 export const EFFECT_DEFINITIONS: readonly EffectDef[] = [
+  /* ============================================================
+     FILTER PRIMITIVES (existing)
+     ============================================================ */
   {
     kind: "blur",
     name: "Gaussian Blur",
@@ -168,6 +171,160 @@ export const EFFECT_DEFINITIONS: readonly EffectDef[] = [
         max: 100,
         step: 1,
         defaultValue: 60,
+      },
+    ],
+  },
+
+  /* ============================================================
+     FILTER PRIMITIVES (new — F14aj)
+     ============================================================ */
+  {
+    kind: "drop-shadow",
+    name: "Drop Shadow",
+    sub: "Stylize",
+    gradientIndex: 1,
+    params: [
+      {
+        key: "amount",
+        label: "Intensity",
+        min: 0,
+        max: 100,
+        step: 1,
+        defaultValue: 70,
+      },
+    ],
+  },
+
+  /* ============================================================
+     FILTER PRESETS (new — F14aj)
+     Presets combine 2-3 CSS filters untuk look khas.
+     `amount` (0-100) scale intensitas preset.
+     ============================================================ */
+  {
+    kind: "vintage",
+    name: "Vintage Film",
+    sub: "Presets",
+    gradientIndex: 5,
+    params: [
+      {
+        key: "amount",
+        label: "Strength",
+        min: 0,
+        max: 100,
+        step: 1,
+        defaultValue: 70,
+      },
+    ],
+  },
+  {
+    kind: "cinematic",
+    name: "Cinematic",
+    sub: "Presets",
+    gradientIndex: 6,
+    params: [
+      {
+        key: "amount",
+        label: "Strength",
+        min: 0,
+        max: 100,
+        step: 1,
+        defaultValue: 70,
+      },
+    ],
+  },
+  {
+    kind: "dreamy",
+    name: "Dreamy",
+    sub: "Presets",
+    gradientIndex: 4,
+    params: [
+      {
+        key: "amount",
+        label: "Strength",
+        min: 0,
+        max: 100,
+        step: 1,
+        defaultValue: 70,
+      },
+    ],
+  },
+  {
+    kind: "noir",
+    name: "Film Noir",
+    sub: "Presets",
+    gradientIndex: 3,
+    params: [
+      {
+        key: "amount",
+        label: "Strength",
+        min: 0,
+        max: 100,
+        step: 1,
+        defaultValue: 80,
+      },
+    ],
+  },
+  {
+    kind: "punch",
+    name: "Punch",
+    sub: "Presets",
+    gradientIndex: 7,
+    params: [
+      {
+        key: "amount",
+        label: "Strength",
+        min: 0,
+        max: 100,
+        step: 1,
+        defaultValue: 70,
+      },
+    ],
+  },
+  {
+    kind: "faded",
+    name: "Faded",
+    sub: "Presets",
+    gradientIndex: 2,
+    params: [
+      {
+        key: "amount",
+        label: "Strength",
+        min: 0,
+        max: 100,
+        step: 1,
+        defaultValue: 70,
+      },
+    ],
+  },
+  {
+    kind: "warm",
+    name: "Warm Sunset",
+    sub: "Presets",
+    gradientIndex: 8,
+    params: [
+      {
+        key: "amount",
+        label: "Strength",
+        min: 0,
+        max: 100,
+        step: 1,
+        defaultValue: 70,
+      },
+    ],
+  },
+  {
+    kind: "cool",
+    name: "Cool Blue",
+    sub: "Presets",
+    gradientIndex: 1,
+    params: [
+      {
+        key: "amount",
+        label: "Strength",
+        min: 0,
+        max: 100,
+        step: 1,
+        defaultValue: 70,
       },
     ],
   },
