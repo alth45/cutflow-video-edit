@@ -45,16 +45,103 @@ CutFlow adalah aplikasi desktop video editor yang memungkinkan pengguna untuk:
 ```
 cutflow/
 ├── src/
-│   ├── main/                 # Electron main process
-│   ├── preload/              # Preload script (bridge main ↔ renderer)
-│   ├── renderer/             # Renderer process (UI)
-│   └── shared/               # Kode shared antara main & renderer
-├── out/                      # Build output (di-gitignore)
-├── electron.vite.config.ts   # Konfigurasi electron-vite
-├── tsconfig.json             # TypeScript root config
-├── tsconfig.node.json        # TypeScript config untuk Node/main
-├── tsconfig.web.json         # TypeScript config untuk browser/renderer
+│   ├── main/                         # Electron main process
+│   │   ├── index.ts                  # Entry point (app lifecycle, window)
+│   │   ├── media-protocol.ts         # Custom protocol untuk streaming file media
+│   │   ├── window.ts                 # Manajemen BrowserWindow
+│   │   └── ipc/                      # Handler IPC (Inter-Process Communication)
+│   │       ├── index.ts              # Pendaftaran channel IPC
+│   │       ├── export.ipc.ts         # Handler export
+│   │       ├── media.ipc.ts          # Handler media
+│   │       └── project.ipc.ts        # Handler project
+│   ├── preload/                      # Preload script (bridge main ↔ renderer)
+│   │   ├── api.ts                    # API yang diexpose via window.cutflow
+│   │   └── index.ts                  # Entry point preload
+│   ├── renderer/                     # Renderer process (UI)
+│   │   ├── index.html                # Entry HTML
+│   │   ├── main.ts                   # Entry point renderer
+│   │   ├── window.d.ts               # Deklarasi tipe window
+│   │   ├── app/                      # Shell aplikasi
+│   │   │   ├── App.ts                # Root component aplikasi
+│   │   │   ├── bootstrap.ts          # Bootstrap aplikasi
+│   │   │   └── flows.ts              # Alur/routing aplikasi
+│   │   ├── core/                     # Utilitas inti
+│   │   │   ├── dialog.ts             # Utilitas dialog
+│   │   │   ├── Dom.ts                # Helper DOM
+│   │   │   ├── dropdown.ts           # Komponen dropdown
+│   │   │   ├── EventBus.ts           # Event bus
+│   │   │   ├── events.ts             # Konstanta event
+│   │   │   ├── icons.ts              # Definisi ikon
+│   │   │   ├── IpcClient.ts          # Wrapper client IPC
+│   │   │   └── Store.ts              # State store
+│   │   ├── modules/                  # Modul fitur
+│   │   │   ├── animations/           # Definisi animasi
+│   │   │   ├── effects/              # Efek video
+│   │   │   ├── export/               # Modul export
+│   │   │   ├── inspector/            # Panel inspector
+│   │   │   ├── keyboard/             # Shortcut keyboard
+│   │   │   ├── keyframes/            # Animasi keyframe
+│   │   │   ├── media/                # Manajemen media
+│   │   │   ├── preview/              # Preview video
+│   │   │   ├── text-editor/          # Editor teks
+│   │   │   ├── timeline/             # Panel timeline
+│   │   │   └── topbar/               # Top bar
+│   │   ├── state/                    # Manajemen state
+│   │   │   ├── appStore.ts           # Store utama
+│   │   │   ├── clipboard.ts          # State clipboard
+│   │   │   ├── demo.ts               # Data demo
+│   │   │   ├── project-serializer.ts # Serialisasi project
+│   │   │   ├── selectors.ts          # Selector state
+│   │   │   └── actions/              # Aksi state (Redux-like)
+│   │   │       ├── clip-effect.actions.ts
+│   │   │       ├── clip-keyframe.actions.ts
+│   │   │       ├── clip-properties.actions.ts
+│   │   │       ├── clip.actions.ts
+│   │   │       ├── clipboard.actions.ts
+│   │   │       ├── helpers.ts
+│   │   │       ├── index.ts
+│   │   │       ├── media.actions.ts
+│   │   │       ├── playback.actions.ts
+│   │   │       ├── project.actions.ts
+│   │   │       ├── selection.actions.ts
+│   │   │       ├── text.actions.ts
+│   │   │       ├── track.actions.ts
+│   │   │       ├── transition.actions.ts
+│   │   │       └── ui.actions.ts
+│   │   ├── styles/                   # Gaya CSS
+│   │   │   ├── layout.css
+│   │   │   ├── main.css
+│   │   │   ├── reset.css
+│   │   │   ├── tokens.css
+│   │   │   └── components/           # Gaya komponen
+│   │   │       ├── animations.css
+│   │   │       ├── dialog.css
+│   │   │       ├── export-modal.css
+│   │   │       ├── inspector.css
+│   │   │       ├── media.css
+│   │   │       ├── preview.css
+│   │   │       ├── text-editor.css
+│   │   │       ├── timeline.css
+│   │   │       ├── toast.css
+│   │   │       └── topbar.css
+│   │   └── utils/                    # Utilitas
+│   │       ├── id.ts                 # Generator ID
+│   │       └── media-url.ts          # Helper URL media
+│   └── shared/                       # Kode shared antara main & renderer
+│       ├── constants.ts              # Konstanta aplikasi
+│       ├── ipc-channels.ts           # Definisi channel IPC
+│       └── types/                    # TypeScript types
+│           ├── api.ts                # Tipe API
+│           ├── project.ts            # Tipe project
+│           ├── state.ts              # Tipe state
+│           └── timeline.ts           # Tipe timeline
+├── out/                              # Build output (di-gitignore)
+├── electron.vite.config.ts           # Konfigurasi electron-vite
+├── tsconfig.json                     # TypeScript root config
+├── tsconfig.node.json                # TypeScript config untuk Node/main
+├── tsconfig.web.json                 # TypeScript config untuk browser/renderer
 ├── package.json
+├── package-lock.json
 └── README.md
 ```
 
