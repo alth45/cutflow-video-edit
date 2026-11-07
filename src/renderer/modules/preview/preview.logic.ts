@@ -28,13 +28,17 @@ export interface ActiveClipInfo {
      half B fades from black)
    - lain: fallback ke cross-dissolve
    ============================================================ */
-
 export interface TransitionSample {
   readonly opacity: number;
   readonly volume: number;
   readonly layer: "source" | "target" | "none";
-  /** Persen offset horizontal (−100..100). Untuk slide. */
   readonly translateX?: number;
+  readonly translateY?: number;
+  readonly scale?: number; // multiplier of base scale
+  readonly blurPx?: number;
+  readonly clipPath?: string;
+  readonly zAbove?: boolean; // override z-index (+1)
+  readonly fadeOverlay?: "white" | "black" | null;
 }
 
 const NO_TRANSITION: TransitionSample = {
@@ -102,56 +106,138 @@ export function getTransitionSample(
       const winEnd = junction + half;
       if (timeSec < winStart || timeSec >= winEnd) continue;
 
-      const progress = (timeSec - winStart) / tr.durationSec; // 0..1
+      const p = (timeSec - winStart) / tr.durationSec; // 0..1
+      const isBefore = tr.beforeClipId === clipId;
 
-      if (tr.kind === "dip-to-black") {
-        /* 2-phase: first half beforeClip fades to black,
-           second half afterClip fades from black. */
-        if (tr.beforeClipId === clipId) {
-          if (progress < 0.5)
-            return {
-              opacity: 1 - progress * 2,
-              volume: 1 - progress,
-              layer: "target",
-            };
-          return { opacity: 0, volume: progress, layer: "target" };
-        }
-        if (tr.afterClipId === clipId) {
-          if (progress >= 0.5)
-            return {
-              opacity: (progress - 0.5) * 2,
-              volume: 1 - progress,
-              layer: "target",
-            };
-          return { opacity: 0, volume: progress, layer: "target" };
-        }
-      }
+      /* ---- Volume: symmetric fade (all kinds) ---- */
+      const vol = isBefore ? 1 - p : p;
 
-      if (tr.kind === "slide") {
-        if (tr.beforeClipId === clipId) {
+      switch (tr.kind) {
+        /* ---- Cross-dissolve ---- */
+        case "cross-dissolve":
+          return isBefore
+            ? { opacity: 1 - p, volume: vol, layer: "source" }
+            : { opacity: 1, volume: vol, layer: "target" };
+
+        /* ---- Dip to Black ---- */
+        case "dip-to-black":
+          return isBefore
+            ? { opacity: Math.max(0, 1 - p * 2), volume: vol, layer: "target" }
+            : {
+                opacity: Math.max(0, (p - 0.5) * 2),
+                volume: vol,
+                layer: "target",
+              };
+
+        /* ---- Dip to White (NEW) ---- */
+        case "dip-to-white":
           return {
-            opacity: 1,
-            volume: 1 - progress,
-            layer: "source",
-            translateX: -progress * 100,
-          };
-        }
-        if (tr.afterClipId === clipId) {
-          return {
-            opacity: 1,
-            volume: progress,
+            opacity: isBefore
+              ? Math.max(0, 1 - p * 2)
+              : Math.max(0, (p - 0.5) * 2),
+            volume: vol,
             layer: "target",
-            translateX: (1 - progress) * 100,
+            fadeOverlay: "white",
           };
-        }
-      }
 
-      /* Default (cross-dissolve & fallback): symmetric fade. */
-      if (tr.beforeClipId === clipId) {
-        return { opacity: 1 - progress, volume: 1 - progress, layer: "source" };
-      }
-      if (tr.afterClipId === clipId) {
-        return { opacity: progress, volume: progress, layer: "target" };
+        /* ---- Slide (existing, horizontal) ---- */
+        case "slide":
+          return isBefore
+            ? { opacity: 1, volume: vol, layer: "source", translateX: -p * 100 }
+            : {
+                opacity: 1,
+                volume: vol,
+                layer: "target",
+                translateX: (1 - p) * 100,
+              };
+
+        /* ---- Slide Vertical (NEW) ---- */
+        case "slide-vertical":
+          return isBefore
+            ? { opacity: 1, volume: vol, layer: "source", translateY: -p * 100 }
+            : {
+                opacity: 1,
+                volume: vol,
+                layer: "target",
+                translateY: (1 - p) * 100,
+              };
+
+        /* ---- Zoom Blur (fixed — sekarang render) ---- */
+        case "zoom-blur": {
+          const zoomAmt = 0.5;
+          const blurMax = 15;
+          return isBefore
+            ? {
+                opacity: 1 - p,
+                volume: vol,
+                layer: "source",
+                scale: 1 + p * zoomAmt,
+                blurPx: p * blurMax,
+              }
+            : {
+                opacity: 1,
+                volume: vol,
+                layer: "target",
+                scale: 1 - (1 - p) * zoomAmt,
+                blurPx: (1 - p) * blurMax,
+              };
+        }
+
+        /* ---- Wipe (fixed — sekarang render, horizontal dari kiri) ---- */
+        case "wipe":
+          return isBefore
+            ? { opacity: 1, volume: vol, layer: "target" }
+            : {
+                opacity: 1,
+                volume: vol,
+                layer: "target",
+                zAbove: true,
+                clipPath: `inset(0 ${(1 - p) * 100}% 0 0)`,
+              };
+
+        /* ---- Circle Wipe (NEW) ---- */
+        case "circle-wipe": {
+          const radius = p * 75; // overshoot untuk cover corner
+          return isBefore
+            ? { opacity: 1, volume: vol, layer: "target" }
+            : {
+                opacity: 1,
+                volume: vol,
+                layer: "target",
+                zAbove: true,
+                clipPath: `circle(${radius}% at 50% 50%)`,
+              };
+        }
+
+        /* ---- Barn Doors (NEW) ---- */
+        case "barn-doors": {
+          const inset = (1 - p) * 50;
+          return isBefore
+            ? { opacity: 1, volume: vol, layer: "target" }
+            : {
+                opacity: 1,
+                volume: vol,
+                layer: "target",
+                zAbove: true,
+                clipPath: `inset(0 ${inset}% 0 ${inset}%)`,
+              };
+        }
+
+        /* ---- Cross Zoom (NEW) ---- */
+        case "cross-zoom":
+          return isBefore
+            ? {
+                opacity: 1 - p,
+                volume: vol,
+                layer: "source",
+                scale: 1 + p * 0.5,
+              }
+            : {
+                opacity: 1,
+                volume: vol,
+                layer: "target",
+                scale: 0.5 + p * 0.5,
+              };
       }
     }
   }

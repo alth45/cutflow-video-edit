@@ -11,6 +11,7 @@ import {
   getVignetteStrength,
 } from "@modules/effects/effect.logic";
 import { ensureChromaFilter } from "./preview.chroma";
+import type { TransitionSample } from "./preview.logic";
 /* ============================================================
    VISUAL TRANSFORM
    ------------------------------------------------------------
@@ -22,29 +23,37 @@ export function applyVisualTransform(
   wrapper: HTMLElement,
   clip: Clip,
   localTimeSec: number,
-  transitionOpacity: number = 1,
-  transitionTranslateX: number = 0,
+  sample: TransitionSample,
 ): void {
   const t = getEffectiveTransform(clip, localTimeSec);
   const c = clip.color ?? DEFAULT_CLIP_COLOR;
 
-  /* ---- Transform (base + transition slide) ---- */
-  const xPct = t.positionX / 2 + transitionTranslateX;
-  const yPct = t.positionY / 2;
+  /* Transform (base + transition deltas) */
+  const xPct = t.positionX / 2 + (sample.translateX ?? 0);
+  const yPct = t.positionY / 2 + (sample.translateY ?? 0);
+  const scaleMul = sample.scale ?? 1;
 
-  wrapper.style.transform = `translate(${xPct}%, ${yPct}%) rotate(${t.rotation}deg) scale(${t.scale / 100})`;
+  wrapper.style.transform = [
+    `translate(${xPct}%, ${yPct}%)`,
+    `rotate(${t.rotation}deg)`,
+    `scale(${(t.scale / 100) * scaleMul})`,
+  ].join(" ");
   wrapper.style.transformOrigin = "center center";
-  wrapper.style.opacity = String((t.opacity / 100) * transitionOpacity);
+  wrapper.style.opacity = String((t.opacity / 100) * sample.opacity);
 
-  /* ---- Crop ---- */
-  if (t.cropLeft > 0 || t.cropRight > 0) {
-    wrapper.style.clipPath = `inset(0 ${t.cropRight}% 0 ${t.cropLeft}%)`;
-  } else {
-    wrapper.style.clipPath = "";
-  }
+  /* Crop / clip-path (transition override wins) */
+  const baseClipPath =
+    t.cropLeft > 0 || t.cropRight > 0
+      ? `inset(0 ${t.cropRight}% 0 ${t.cropLeft}%)`
+      : "";
+  wrapper.style.clipPath = sample.clipPath ?? baseClipPath;
 
-  /* ---- Feather ---- */
-  if (t.featherEdge && (t.cropLeft > 0 || t.cropRight > 0)) {
+  /* Feather */
+  if (
+    t.featherEdge &&
+    (t.cropLeft > 0 || t.cropRight > 0) &&
+    !sample.clipPath
+  ) {
     const leftFade = t.cropLeft > 0 ? 3 : 0;
     const rightFade = t.cropRight > 0 ? 3 : 0;
     const mask = `linear-gradient(to right, transparent 0, black ${leftFade}%, black ${100 - rightFade}%, transparent 100%)`;
@@ -55,18 +64,21 @@ export function applyVisualTransform(
     wrapper.style.setProperty("-webkit-mask-image", "");
   }
 
-  /* ---- Color correction + effects (combined filter) ---- */
-  /* ---- Filter chain: chroma key first, then color + effects ---- */
+  /* Filter chain: chroma → color/effects → transition blur */
   const filterParts: string[] = [];
   if (clip.chromaKey?.enabled) {
-    const id = ensureChromaFilter(clip.id, clip.chromaKey);
-    filterParts.push(`url(#${id})`);
+    // const { ensureChromaFilter } =
+    // require("./preview.chroma") as typeof import("./preview.chroma");
+    filterParts.push(`url(#${ensureChromaFilter(clip.id, clip.chromaKey)})`);
   }
   const colorFx = buildFilterString(clip);
   if (colorFx) filterParts.push(colorFx);
+  if (sample.blurPx && sample.blurPx > 0) {
+    filterParts.unshift(`blur(${sample.blurPx.toFixed(1)}px)`);
+  }
   wrapper.style.filter = filterParts.join(" ") || "";
 
-  /* ---- Vignette overlay ---- */
+  /* Vignette */
   const vignetteStrength = getVignetteStrength(clip);
   if (vignetteStrength !== null) {
     wrapper.classList.add("has-vignette");
@@ -79,14 +91,13 @@ export function applyVisualTransform(
     wrapper.style.removeProperty("--vignette-color");
   }
 
-  /* ---- Temperature overlay ---- */
+  /* Temp overlay */
   let overlay = wrapper.querySelector<HTMLElement>(".preview-color-overlay");
   if (!overlay) {
     overlay = document.createElement("div");
     overlay.className = "preview-color-overlay";
     wrapper.append(overlay);
   }
-
   if (c.temp !== 0) {
     const alpha = Math.min(0.5, (Math.abs(c.temp) / 100) * 0.5);
     const color =

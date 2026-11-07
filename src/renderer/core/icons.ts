@@ -41,6 +41,9 @@ import {
   Circle,
   Diamond,
   createElement,
+  Sun,
+  ArrowDown,
+  Columns2,
   type IconNode,
   DiamondMinus,
 } from "lucide";
@@ -115,6 +118,11 @@ const ICONS = {
   check: Check,
   alert: AlertTriangle,
   x: X,
+
+  /* Transitions — extended */
+  sun: Sun,
+  "arrow-down": ArrowDown,
+  columns: Columns2,
 } as const satisfies Record<string, IconNode>;
 
 export type IconName = keyof typeof ICONS;

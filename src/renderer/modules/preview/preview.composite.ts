@@ -66,6 +66,40 @@ export function renderComposite(
     el.classList.toggle("selected", clipId === activeSelectedId);
   }
 
+  /* Fade overlay (dip-to-white dkk) */
+  updateFadeOverlay(view, state);
   /* Position selection overlay at selected clip bounds */
   updateSelectionOverlay(view, renderedClips);
+}
+
+/* ============================================================
+   FADE OVERLAY — dip-to-white dkk
+   ============================================================ */
+function updateFadeOverlay(view: PreviewView, state: AppState): void {
+  const timeSec = state.playback.currentTimeSec;
+  let maxOpacity = 0;
+  let color = "rgba(0,0,0,0)";
+
+  for (const track of state.project.sequence.tracks) {
+    for (const tr of track.transitions) {
+      if (tr.kind !== "dip-to-white") continue;
+
+      const beforeClip = track.clips.find((c) => c.id === tr.beforeClipId);
+      if (!beforeClip) continue;
+
+      const junction = beforeClip.startSec + beforeClip.durationSec;
+      const half = tr.durationSec / 2;
+      if (timeSec < junction - half || timeSec >= junction + half) continue;
+
+      const p = (timeSec - (junction - half)) / tr.durationSec;
+      const op = 1 - Math.abs(p - 0.5) * 2;
+      if (op > maxOpacity) {
+        maxOpacity = op;
+        color = `rgba(255, 255, 255, ${op.toFixed(2)})`;
+      }
+    }
+  }
+
+  view.fadeOverlay.style.background = color;
+  view.fadeOverlay.style.opacity = maxOpacity > 0 ? "1" : "0";
 }

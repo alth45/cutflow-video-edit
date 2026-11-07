@@ -16,9 +16,14 @@ export interface ListEntry {
 export const TRANSITIONS: readonly ListEntry[] = [
   { name: "Cross Dissolve", sub: "0.5s · default", gradientIndex: 3 },
   { name: "Dip to Black", sub: "0.5s", gradientIndex: 2 },
-  { name: "Slide", sub: "0.4s · left", gradientIndex: 5 },
-  { name: "Zoom Blur", sub: "0.6s", gradientIndex: 1 },
+  { name: "Dip to White", sub: "0.5s", gradientIndex: 6 },
+  { name: "Slide (H)", sub: "0.4s · left", gradientIndex: 5 },
+  { name: "Slide (V)", sub: "0.4s · down", gradientIndex: 5 },
   { name: "Wipe", sub: "0.5s · right", gradientIndex: 7 },
+  { name: "Circle Wipe", sub: "0.6s", gradientIndex: 4 },
+  { name: "Barn Doors", sub: "0.5s", gradientIndex: 1 },
+  { name: "Zoom Blur", sub: "0.6s", gradientIndex: 1 },
+  { name: "Cross Zoom", sub: "0.7s", gradientIndex: 8 },
 ];
 
 /* ---------- Filter ---------- */

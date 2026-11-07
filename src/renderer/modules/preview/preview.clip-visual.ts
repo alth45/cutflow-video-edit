@@ -53,15 +53,13 @@ export function createClipVisual(
       }
       content.append(textEl);
       wrapper.append(content);
-      applyVisualTransform(
-        wrapper,
-        clip,
-        localTimeSec,
-        sample.opacity,
-        sample.translateX ?? 0,
-      );
+      applyVisualTransform(wrapper, clip, localTimeSec, sample);
       wrapper.style.zIndex = String(
-        computeZIndex(state, info.track.id, sample.layer === "source", true),
+        computeZIndex(
+          state,
+          info.track.id,
+          sample.zAbove ?? sample.layer === "source",
+        ),
       );
       return wrapper;
     }
@@ -76,15 +74,13 @@ export function createClipVisual(
       if (isDemoPath(asset.path)) {
         content.append(createPlaceholderVisual(asset.name, "video"));
         wrapper.append(content);
-        applyVisualTransform(
-          wrapper,
-          clip,
-          localTimeSec,
-          sample.opacity,
-          sample.translateX ?? 0,
-        );
+        applyVisualTransform(wrapper, clip, localTimeSec, sample);
         wrapper.style.zIndex = String(
-          computeZIndex(state, info.track.id, sample.layer === "source"),
+          computeZIndex(
+            state,
+            info.track.id,
+            sample.zAbove ?? sample.layer === "source",
+          ),
         );
         return wrapper;
       }
@@ -106,15 +102,13 @@ export function createClipVisual(
       wrapper.append(content);
       videoCache.set(clip.id, video);
       audioEngine.attach(video);
-      applyVisualTransform(
-        wrapper,
-        clip,
-        localTimeSec,
-        sample.opacity,
-        sample.translateX ?? 0,
-      );
+      applyVisualTransform(wrapper, clip, localTimeSec, sample);
       wrapper.style.zIndex = String(
-        computeZIndex(state, info.track.id, sample.layer === "source"),
+        computeZIndex(
+          state,
+          info.track.id,
+          sample.zAbove ?? sample.layer === "source",
+        ),
       );
       return wrapper;
     }
@@ -129,15 +123,13 @@ export function createClipVisual(
       if (isDemoPath(asset.path)) {
         content.append(createPlaceholderVisual(asset.name, "image"));
         wrapper.append(content);
-        applyVisualTransform(
-          wrapper,
-          clip,
-          localTimeSec,
-          sample.opacity,
-          sample.translateX ?? 0,
-        );
+        applyVisualTransform(wrapper, clip, localTimeSec, sample);
         wrapper.style.zIndex = String(
-          computeZIndex(state, info.track.id, sample.layer === "source"),
+          computeZIndex(
+            state,
+            info.track.id,
+            sample.zAbove ?? sample.layer === "source",
+          ),
         );
         return wrapper;
       }
@@ -153,15 +145,13 @@ export function createClipVisual(
       });
       content.append(img);
       wrapper.append(content);
-      applyVisualTransform(
-        wrapper,
-        clip,
-        localTimeSec,
-        sample.opacity,
-        sample.translateX ?? 0,
-      );
+      applyVisualTransform(wrapper, clip, localTimeSec, sample);
       wrapper.style.zIndex = String(
-        computeZIndex(state, info.track.id, sample.layer === "source"),
+        computeZIndex(
+          state,
+          info.track.id,
+          sample.zAbove ?? sample.layer === "source",
+        ),
       );
       return wrapper;
     }
@@ -204,18 +194,12 @@ export function updateClipVisual(
   const timeSec = state.playback.currentTimeSec;
 
   const sample = getTransitionSample(state, clip.id, timeSec);
-  applyVisualTransform(
-    el,
-    clip,
-    localTimeSec,
-    sample.opacity,
-    sample.translateX ?? 0,
-  );
+  applyVisualTransform(el, clip, localTimeSec, sample);
   el.style.zIndex = String(
     computeZIndex(
       state,
-      track.id,
-      sample.layer === "source",
+      info.track.id,
+      sample.zAbove ?? sample.layer === "source",
       clip.kind === "text",
     ),
   );

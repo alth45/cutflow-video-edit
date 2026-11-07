@@ -18,6 +18,7 @@ export interface PreviewView {
   readonly seqMeta: HTMLElement;
   readonly monitor: HTMLElement;
   readonly compositeLayer: HTMLElement;
+  readonly fadeOverlay: HTMLElement;
   readonly selectionOverlay: HTMLElement;
   readonly playOverlay: HTMLElement;
   readonly btnPlay: HTMLButtonElement;
@@ -91,6 +92,9 @@ export function renderPreview(state: AppState): PreviewView {
   inner.append(emptyState);
 
   const compositeLayer = el("div", { className: "monitor-composite" });
+
+  const fadeOverlay = el("div", { className: "preview-fade-overlay" }); // ← TAMBAH
+  compositeLayer.append(fadeOverlay); // ← TAMBAH: child of composite, high z
 
   /* Selection overlay + corner handles (F14u) */
   const selectionOverlay = el("div", {
@@ -188,6 +192,7 @@ export function renderPreview(state: AppState): PreviewView {
     seqMeta,
     monitor,
     compositeLayer,
+    fadeOverlay,
     selectionOverlay,
     playOverlay,
     btnPlay,

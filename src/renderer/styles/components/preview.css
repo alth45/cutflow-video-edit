@@ -620,3 +620,20 @@
   pointer-events: none;
   z-index: 1;
 }
+
+/* ============================================================
+   FADE OVERLAY (F14al)
+   ------------------------------------------------------------
+   Fullscreen overlay inside composite. For dip-to-white (and
+   future dip-to-color variants). z-index tinggi (di atas semua
+   clip dalam composite context).
+   ============================================================ */
+.preview-fade-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+  background: rgba(0, 0, 0, 0);
+  opacity: 0;
+  transition: none; /* dikontrol JS per frame */
+}

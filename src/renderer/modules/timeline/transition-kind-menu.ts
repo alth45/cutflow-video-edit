@@ -21,9 +21,14 @@ interface MenuItem {
 const ITEMS: readonly MenuItem[] = [
   { kind: "cross-dissolve", label: "Cross Dissolve", icon: "blend" },
   { kind: "dip-to-black", label: "Dip to Black", icon: "moon" },
-  { kind: "slide", label: "Slide", icon: "arrow-right" },
-  { kind: "zoom-blur", label: "Zoom Blur", icon: "fullscreen" },
+  { kind: "dip-to-white", label: "Dip to White", icon: "sun" },
+  { kind: "slide", label: "Slide (H)", icon: "arrow-right" },
+  { kind: "slide-vertical", label: "Slide (V)", icon: "arrow-down" },
   { kind: "wipe", label: "Wipe", icon: "move-horizontal" },
+  { kind: "circle-wipe", label: "Circle Wipe", icon: "outline" },
+  { kind: "barn-doors", label: "Barn Doors", icon: "columns" },
+  { kind: "zoom-blur", label: "Zoom Blur", icon: "fullscreen" },
+  { kind: "cross-zoom", label: "Cross Zoom", icon: "zoom-in" },
 ];
 
 const MENU_CLASS = "transition-kind-menu";

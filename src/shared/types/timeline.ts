@@ -153,7 +153,7 @@ export const DEFAULT_CLIP_AUDIO: ClipAudio = Object.freeze({
 
    Similarity: 0-100. Higher = remove more greenish pixels.
    ============================================================ */
-export interface ClipChromaKey  {
+export interface ClipChromaKey {
   readonly enabled: boolean;
   readonly keyColor: "green" | "blue";
   readonly similarity: number; // 0..100
@@ -319,7 +319,13 @@ export type TransitionKind =
   | "dip-to-black"
   | "slide"
   | "zoom-blur"
-  | "wipe";
+  | "wipe"
+  /* --- New (F14al) --- */
+  | "dip-to-white"
+  | "slide-vertical"
+  | "circle-wipe"
+  | "barn-doors"
+  | "cross-zoom";
 
 export interface Transition {
   readonly id: string;
