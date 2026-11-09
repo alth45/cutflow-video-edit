@@ -12,6 +12,7 @@ import {
 import { attachMediaController } from "./media.controller";
 import { importMediaFlow } from "../../app/flows";
 import { getActiveClip } from "@state/selectors";
+import { renderShapePane } from "./media.view";
 
 export function mountMedia(container: HTMLElement): () => void {
   const initial = appStore.getState();
@@ -20,7 +21,7 @@ export function mountMedia(container: HTMLElement): () => void {
 
   /* Initial content renders */
   renderAllPanes(view, initial);
-
+  syncActiveTab(view, initial);
   /* Subscriber: re-render panes ketika search query atau assets berubah */
   const unsubscribe = appStore.subscribe((state, prev) => {
     const tabChanged = state.ui.media.activeTab !== prev.ui.media.activeTab;
@@ -102,12 +103,26 @@ export function mountMedia(container: HTMLElement): () => void {
 }
 
 function syncActiveTab(view: MediaView, state: AppState): void {
+  const activeTab = state.ui.media.activeTab;
+
   for (const [id, btn] of view.tabButtons) {
-    btn.classList.toggle("active", id === state.ui.media.activeTab);
+    btn.classList.toggle("active", id === activeTab);
   }
   for (const [id, pane] of view.panes) {
-    pane.hidden = id !== state.ui.media.activeTab;
+    pane.hidden = id !== activeTab;
   }
+
+  /* Dropdown label + active state */
+  const dropdownActive =
+    activeTab === "media-anim" || activeTab === "media-shape";
+  view.tabDropdownTrigger.classList.toggle("active", dropdownActive);
+  const label =
+    activeTab === "media-anim"
+      ? "Animation"
+      : activeTab === "media-shape"
+        ? "Shape"
+        : "Insert";
+  view.tabDropdownLabel.textContent = label;
 }
 
 function renderAllPanes(view: MediaView, state: AppState): void {
@@ -126,6 +141,7 @@ function renderAllPanes(view: MediaView, state: AppState): void {
   );
   renderTransitionsPane(view.trContainer, assets, query, selectedAssets);
   renderAnimationsPane(view.animContainer, query, activeClip);
+  renderShapePane(view.shapeContainer, query); // ← TAMBAH
   updateSelectionBar(view, state);
 }
 

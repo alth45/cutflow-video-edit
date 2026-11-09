@@ -6,6 +6,7 @@ import { eventBus } from "@core/events";
 import type { EffectKind, AnimationKind } from "@shared/types/timeline";
 import { deleteMediaAssetsFlow } from "../../app/flows";
 import { setDraggedAssetId } from "./media-drag";
+import type { ShapeKind } from "@shared/types/timeline";
 
 export interface MediaControllerCallbacks {
   readonly onImportClick: () => void;
@@ -23,10 +24,41 @@ export function attachMediaController(
 ): () => void {
   const cleanups: Array<() => void> = [];
 
-  /* Tab buttons */
+  /* Regular tab buttons */
   for (const [tabId, btn] of view.tabButtons) {
     cleanups.push(on(btn, "click", () => actions.setMediaTab(tabId)));
   }
+
+  /* Dropdown trigger — toggle open/close */
+  cleanups.push(
+    on(view.tabDropdownTrigger, "click", (ev) => {
+      ev.stopPropagation();
+      view.tabDropdown.classList.toggle("open");
+    }),
+  );
+
+  /* Dropdown items — set tab + close */
+  cleanups.push(
+    on(view.animTabButton, "click", () => {
+      actions.setMediaTab("media-anim");
+      view.tabDropdown.classList.remove("open");
+    }),
+  );
+  cleanups.push(
+    on(view.shapeTabButton, "click", () => {
+      actions.setMediaTab("media-shape");
+      view.tabDropdown.classList.remove("open");
+    }),
+  );
+
+  /* Close dropdown on outside click */
+  cleanups.push(
+    on(document, "click", (ev) => {
+      if (!view.tabDropdown.contains(ev.target as Node)) {
+        view.tabDropdown.classList.remove("open");
+      }
+    }),
+  );
 
   /* Search input */
   cleanups.push(
@@ -168,6 +200,18 @@ export function attachMediaController(
   cleanups.push(
     on(document, "dragend", () => {
       setDraggedAssetId(null);
+    }),
+  );
+
+  /* ---- Click shape → insert clip ---- */
+  cleanups.push(
+    delegate(view.shapeContainer, "click", ".shape-item", (ev, item) => {
+      ev.stopPropagation();
+      const shapeKind = (item as HTMLElement).dataset["shapeKind"] as
+        | ShapeKind
+        | undefined;
+      if (!shapeKind) return;
+      actions.addShapeClip(shapeKind);
     }),
   );
 

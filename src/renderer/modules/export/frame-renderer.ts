@@ -196,6 +196,8 @@ export async function drawFrame(
         clip.source.content,
         clip.source.style ?? DEFAULT_TEXT_STYLE,
       );
+    } else if (clip.source.kind === "shape") {
+      drawShape(ctx, clip.source);
     }
 
     ctx.restore();
@@ -279,4 +281,95 @@ function applyChromaKeyPixels(
       data[i + 3] = Math.round(data[i + 3]! * (1 - ratio));
     }
   }
+}
+
+/* ============================================================
+   SHAPE DRAWING (canvas export)
+   ============================================================ */
+function drawShape(
+  ctx: CanvasRenderingContext2D,
+  source: {
+    shapeType: string;
+    fillColor: string;
+    strokeColor: string;
+    strokeWidth: number;
+  },
+): void {
+  const W = ctx.canvas.width;
+  const H = ctx.canvas.height;
+  const size = Math.min(W, H) * 0.4;
+  const s = size / 100;
+
+  ctx.save();
+  ctx.translate(-size / 2, -size / 2);
+  ctx.scale(s, s);
+  ctx.fillStyle = source.fillColor;
+  ctx.strokeStyle = source.strokeColor;
+  ctx.lineWidth = source.strokeWidth * 3;
+
+  ctx.beginPath();
+  switch (source.shapeType) {
+    case "rectangle":
+      ctx.rect(10, 10, 80, 80);
+      break;
+    case "circle":
+      ctx.arc(50, 50, 40, 0, Math.PI * 2);
+      break;
+    case "triangle":
+      ctx.moveTo(50, 10);
+      ctx.lineTo(90, 90);
+      ctx.lineTo(10, 90);
+      ctx.closePath();
+      break;
+    case "line":
+      ctx.moveTo(10, 50);
+      ctx.lineTo(90, 50);
+      ctx.lineCap = "round";
+      ctx.lineWidth = source.strokeWidth * 4;
+      ctx.stroke();
+      ctx.restore();
+      return;
+    case "star":
+      ctx.moveTo(50, 5);
+      ctx.lineTo(61, 35);
+      ctx.lineTo(95, 35);
+      ctx.lineTo(68, 57);
+      ctx.lineTo(79, 90);
+      ctx.lineTo(50, 70);
+      ctx.lineTo(21, 90);
+      ctx.lineTo(32, 57);
+      ctx.lineTo(5, 35);
+      ctx.lineTo(39, 35);
+      ctx.closePath();
+      break;
+    case "arrow":
+      ctx.moveTo(10, 40);
+      ctx.lineTo(60, 40);
+      ctx.lineTo(60, 20);
+      ctx.lineTo(90, 50);
+      ctx.lineTo(60, 80);
+      ctx.lineTo(60, 60);
+      ctx.lineTo(10, 60);
+      ctx.closePath();
+      break;
+    case "diamond":
+      ctx.moveTo(50, 10);
+      ctx.lineTo(90, 50);
+      ctx.lineTo(50, 90);
+      ctx.lineTo(10, 50);
+      ctx.closePath();
+      break;
+    case "hexagon":
+      ctx.moveTo(50, 5);
+      ctx.lineTo(90, 27);
+      ctx.lineTo(90, 73);
+      ctx.lineTo(50, 95);
+      ctx.lineTo(10, 73);
+      ctx.lineTo(10, 27);
+      ctx.closePath();
+      break;
+  }
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
 }

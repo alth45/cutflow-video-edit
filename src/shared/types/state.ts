@@ -58,7 +58,7 @@ export interface PlaybackState {
   readonly playing: boolean;
   /** Posisi playhead dalam detik. Range: [0, sequence.durationSec]. */
   readonly currentTimeSec: number;
-  readonly muted: boolean; 
+  readonly muted: boolean;
 }
 
 /* ============================================================
@@ -68,7 +68,8 @@ export type MediaPanelTab =
   | "media-bin"
   | "media-fx"
   | "media-tr"
-  | "media-anim";
+  | "media-anim"
+  | "media-shape";
 
 export interface MediaPanelState {
   readonly activeTab: MediaPanelTab;

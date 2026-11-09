@@ -6,7 +6,7 @@ import { DEFAULT_CLIP_AUDIO } from "@shared/types/timeline";
    PREVIEW COMPOSITING LOGIC — pure
    ============================================================ */
 
-export type VisualType = "video" | "image" | "text" | "unsupported";
+export type VisualType = "video" | "image" | "text" | "shape" | "unsupported";
 
 export interface ActiveClipInfo {
   readonly clip: Clip;
@@ -276,6 +276,7 @@ export function getActiveClipsAtTime(
 
 function resolveVisualType(clip: Clip, state: AppState): VisualType {
   if (clip.kind === "text") return "text";
+  if (clip.kind === "shape") return "shape"; 
   if (clip.kind === "audio") return "unsupported";
 
   const asset = state.project.mediaAssets.find(

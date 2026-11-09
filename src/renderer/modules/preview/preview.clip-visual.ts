@@ -13,6 +13,7 @@ import {
   computeZIndex,
   syncAnimationClass,
 } from "./preview.visual-transform";
+import { getShapeDef } from "@modules/shapes/shape-definitions";
 
 /* ============================================================
    CREATE CLIP VISUAL
@@ -156,6 +157,41 @@ export function createClipVisual(
       return wrapper;
     }
 
+    case "shape": {
+      wrapper.classList.add("shape");
+      if (clip.source.kind !== "shape") return null;
+
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "0 0 100 100");
+      svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+      svg.classList.add("preview-shape");
+      svg.innerHTML =
+        getShapeDef(clip.source.shapeType)?.svgContent(
+          clip.source.fillColor,
+          clip.source.strokeColor,
+          clip.source.strokeWidth,
+        ) ?? "";
+      svg.dataset["styleKey"] =
+        `${clip.source.shapeType}|${clip.source.fillColor}|${clip.source.strokeColor}|${clip.source.strokeWidth}`;
+
+      content.append(svg);
+      wrapper.append(content);
+      const sample = getTransitionSample(
+        state,
+        clip.id,
+        state.playback.currentTimeSec,
+      );
+      applyVisualTransform(wrapper, clip, localTimeSec, sample);
+      wrapper.style.zIndex = String(
+        computeZIndex(
+          state,
+          info.track.id,
+          sample.zAbove ?? sample.layer === "source",
+        ),
+      );
+      return wrapper;
+    }
+
     default:
       return null;
   }
@@ -257,6 +293,24 @@ export function updateClipVisual(
         if (Math.abs(video.currentTime - localTimeSec) > 0.05) {
           video.currentTime = localTimeSec;
         }
+      }
+      return;
+    }
+
+    case "shape": {
+      if (clip.source.kind !== "shape") return;
+      const svg = el.querySelector<SVGElement>(".preview-shape");
+      if (!svg) return;
+
+      const key = `${clip.source.shapeType}|${clip.source.fillColor}|${clip.source.strokeColor}|${clip.source.strokeWidth}`;
+      if (svg.dataset["styleKey"] !== key) {
+        svg.innerHTML =
+          getShapeDef(clip.source.shapeType)?.svgContent(
+            clip.source.fillColor,
+            clip.source.strokeColor,
+            clip.source.strokeWidth,
+          ) ?? "";
+        svg.dataset["styleKey"] = key;
       }
       return;
     }

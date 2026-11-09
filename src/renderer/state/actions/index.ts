@@ -18,3 +18,4 @@ export * from "./media.actions";
 export * from "./text.actions";
 export * from "./clipboard.actions";
 export * from "./ui.actions";
+export * from "./shape.actions";

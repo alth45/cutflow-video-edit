@@ -108,5 +108,7 @@ function cloneWithNewPosition(
       return { ...clip, ...base };
     case "text":
       return { ...clip, ...base };
+    case "shape":
+      return { ...clip, ...base };
   }
 }

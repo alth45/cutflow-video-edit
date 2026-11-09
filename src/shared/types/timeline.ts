@@ -33,8 +33,7 @@
    actions saat add clip (F5), bukan oleh tipe (untuk simplisitas).
    ============================================================ */
 export type TrackKind = "video" | "audio";
-export type ClipKind = "video" | "audio" | "text";
-
+export type ClipKind = "video" | "audio" | "text" | "shape";
 /* ============================================================
    COLOR TOKEN
    ------------------------------------------------------------
@@ -169,6 +168,37 @@ export const DEFAULT_CLIP_AUDIO: ClipAudio = Object.freeze({
   fadeOutSec: 0,
   pan: 0,
   boostDb: 0,
+});
+
+/* ============================================================
+   SHAPE CLIP (F14aq)
+   ------------------------------------------------------------
+   Procedural geometry clip. Rendered via SVG (preview) and
+   canvas path (export). Sits in video track, works with
+   transform/color/effects/keyframes/animations.
+   ============================================================ */
+export type ShapeKind =
+  | "rectangle"
+  | "circle"
+  | "triangle"
+  | "line"
+  | "star"
+  | "arrow"
+  | "diamond"
+  | "hexagon";
+
+export interface ShapeClipSource {
+  readonly kind: "shape";
+  readonly shapeType: ShapeKind;
+  readonly fillColor: string;
+  readonly strokeColor: string;
+  readonly strokeWidth: number;
+}
+
+export const DEFAULT_SHAPE_STYLE = Object.freeze({
+  fillColor: "#7c5cff",
+  strokeColor: "#ffffff",
+  strokeWidth: 2,
 });
 
 /* ============================================================
@@ -376,7 +406,7 @@ export interface TextClipSource {
   readonly style: TextClipStyle;
 }
 
-export type ClipSource = MediaClipSource | TextClipSource;
+export type ClipSource = MediaClipSource | TextClipSource | ShapeClipSource;
 
 /* ============================================================
    CLIP
@@ -431,6 +461,11 @@ export interface TextClip extends ClipBase {
   readonly source: TextClipSource;
 }
 
+export interface ShapeClip extends ClipBase {
+  readonly kind: "shape";
+  readonly source: ShapeClipSource;
+}
+
 /**
  * Union semua clip. Gunakan `clip.kind` untuk narrow.
  *
@@ -440,7 +475,7 @@ export interface TextClip extends ClipBase {
  *     case 'text' : /* TextClip   *\/
  *   }
  */
-export type Clip = VideoClip | AudioClip | TextClip;
+export type Clip = VideoClip | AudioClip | TextClip | ShapeClip;
 
 /* ============================================================
    TRACK

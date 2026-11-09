@@ -20,6 +20,8 @@ import {
   ANIMATION_DEFINITIONS,
   type AnimationDef,
 } from "@modules/animations/animation-definitions";
+import { SHAPE_DEFINITIONS } from "@modules/shapes/shape-definitions";
+import type { ShapeKind } from "@shared/types/timeline";
 
 /* ============================================================
    MEDIA VIEW
@@ -38,6 +40,13 @@ export interface MediaView {
   readonly selectionBar: HTMLElement;
   readonly selectionCount: HTMLElement;
   readonly deleteSelectionBtn: HTMLButtonElement;
+  readonly tabDropdown: HTMLElement; // wrapper
+  readonly tabDropdownTrigger: HTMLButtonElement; // click target
+  readonly tabDropdownMenu: HTMLElement; // popup menu
+  readonly tabDropdownLabel: HTMLElement; // label (Animation/Shape/Insert)
+  readonly animTabButton: HTMLButtonElement; // dropdown item
+  readonly shapeTabButton: HTMLButtonElement; // dropdown item
+  readonly shapeContainer: HTMLElement; // pane container
   readonly binContainer: HTMLElement;
   readonly fxContainer: HTMLElement;
   readonly trContainer: HTMLElement;
@@ -48,7 +57,15 @@ const TAB_DEFS: ReadonlyArray<{ id: MediaPanelTab; label: string }> = [
   { id: "media-bin", label: "Media" },
   { id: "media-fx", label: "Effects" },
   { id: "media-tr", label: "Transitions" },
-  { id: "media-anim", label: "Animations" },
+];
+
+const DROPDOWN_TABS: ReadonlyArray<{
+  id: MediaPanelTab;
+  label: string;
+  icon: string;
+}> = [
+  { id: "media-anim", label: "Animation", icon: "film" },
+  { id: "media-shape", label: "Shape", icon: "shapes" },
 ];
 
 export function renderMediaView(state: AppState): MediaView {
@@ -71,6 +88,43 @@ export function renderMediaView(state: AppState): MediaView {
     tabs.append(btn);
     tabButtons.set(def.id, btn);
   }
+
+  /* ---- Dropdown tab (Animation / Shape) ---- */
+  const tabDropdown = el("div", { className: "tab-dropdown" });
+  const isDropdownActive =
+    state.ui.media.activeTab === "media-anim" ||
+    state.ui.media.activeTab === "media-shape";
+
+  const tabDropdownTrigger = el("button", {
+    className: `tab tab-dropdown-trigger${isDropdownActive ? " active" : ""}`,
+  });
+
+  const activeDropdownDef = DROPDOWN_TABS.find(
+    (d) => d.id === state.ui.media.activeTab,
+  );
+  const tabDropdownLabel = el("span", {
+    text: activeDropdownDef?.label ?? "Insert",
+  });
+  const dropdownChev = createIcon("chevron");
+  dropdownChev.style.cssText = "width:10px;height:10px;";
+  tabDropdownTrigger.append(tabDropdownLabel, dropdownChev);
+
+  const tabDropdownMenu = el("div", { className: "tab-dropdown-menu" });
+  const animTabButton = el("button", { className: "tab-dropdown-item" });
+  const animIcon = createIcon("film", "ic");
+  animIcon.style.cssText = "width:13px;height:13px;";
+  animTabButton.append(animIcon, el("span", { text: "Animation" }));
+  animTabButton.dataset["tab"] = "media-anim";
+
+  const shapeTabButton = el("button", { className: "tab-dropdown-item" });
+  const shapeIcon = createIcon("shapes", "ic");
+  shapeIcon.style.cssText = "width:13px;height:13px;";
+  shapeTabButton.append(shapeIcon, el("span", { text: "Shape" }));
+  shapeTabButton.dataset["tab"] = "media-shape";
+
+  tabDropdownMenu.append(animTabButton, shapeTabButton);
+  tabDropdown.append(tabDropdownTrigger, tabDropdownMenu);
+  tabs.append(tabDropdown);
   head.append(tabs);
 
   /* ---- Search ---- */
@@ -140,6 +194,13 @@ export function renderMediaView(state: AppState): MediaView {
   panes.set("media-anim", animPane);
   body.append(animPane);
 
+  const shapePane = el("div");
+  shapePane.dataset["pane"] = "media-shape";
+  const shapeContainer = el("div");
+  shapePane.append(shapeContainer);
+  panes.set("media-shape", shapePane);
+  body.append(shapePane);
+
   panes.forEach((pane, id) => {
     pane.hidden = id !== state.ui.media.activeTab;
   });
@@ -159,6 +220,13 @@ export function renderMediaView(state: AppState): MediaView {
     fxContainer,
     trContainer,
     animContainer,
+    tabDropdown,
+    tabDropdownTrigger,
+    tabDropdownMenu,
+    tabDropdownLabel,
+    animTabButton,
+    shapeTabButton,
+    shapeContainer, // ← TAMBAH
   };
 }
 
@@ -515,4 +583,48 @@ function renderAnimationItem(
 
   item.append(swatch, textWrap);
   return item;
+}
+
+/* ============================================================
+   SHAPE PANE (F14aq)
+   ============================================================ */
+export function renderShapePane(container: HTMLElement, query: string): void {
+  clear(container);
+
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? SHAPE_DEFINITIONS.filter((s) => s.name.toLowerCase().includes(q))
+    : SHAPE_DEFINITIONS;
+
+  if (filtered.length === 0) {
+    container.append(
+      el("div", { className: "bin-empty", text: "No items match search" }),
+    );
+    return;
+  }
+
+  container.append(renderBinLabel("Shapes", filtered.length));
+
+  const grid = el("div", { className: "shape-grid" });
+  for (const def of filtered) {
+    const item = el("button", {
+      className: "shape-item",
+      attrs: { type: "button" },
+    });
+    item.dataset["shapeKind"] = def.kind;
+    item.title = def.name;
+
+    /* Mini preview SVG */
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 100 100");
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    svg.innerHTML = def.svgContent("#7c5cff", "rgba(255,255,255,0.7)", 2);
+    item.append(svg);
+
+    const label = el("div", { className: "shape-item-label", text: def.name });
+    item.append(label);
+
+    grid.append(item);
+  }
+  container.append(grid);
 }

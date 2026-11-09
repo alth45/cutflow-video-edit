@@ -5,6 +5,7 @@ import {
   DEFAULT_CLIP_COLOR,
   DEFAULT_CLIP_AUDIO,
   DEFAULT_TEXT_STYLE,
+  DEFAULT_SHAPE_STYLE,
 } from "@shared/types/timeline";
 import { DEFAULT_CHROMA_KEY } from "@shared/types/timeline";
 import { DEFAULT_CURVE } from "@shared/types/timeline";
@@ -133,6 +134,22 @@ export function parseProject(json: string): ParseProjectResult {
             if (!src["style"]) {
               patched["source"] = { ...src, style: DEFAULT_TEXT_STYLE };
             }
+          }
+          /* Shape source: normalize style defaults jika field hilang. */
+          if (
+            source &&
+            typeof source === "object" &&
+            (source as Record<string, unknown>)["kind"] === "shape"
+          ) {
+            const src = source as Record<string, unknown>;
+            const patchedSrc: Record<string, unknown> = { ...src };
+            if (!patchedSrc["fillColor"])
+              patchedSrc["fillColor"] = DEFAULT_SHAPE_STYLE.fillColor;
+            if (!patchedSrc["strokeColor"])
+              patchedSrc["strokeColor"] = DEFAULT_SHAPE_STYLE.strokeColor;
+            if (patchedSrc["strokeWidth"] === undefined)
+              patchedSrc["strokeWidth"] = DEFAULT_SHAPE_STYLE.strokeWidth;
+            patched["source"] = patchedSrc;
           }
 
           return patched;

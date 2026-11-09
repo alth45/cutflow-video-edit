@@ -46,6 +46,12 @@ import {
   Columns2,
   Minimize,
   RotateCcw,
+  Hexagon,
+  Triangle,
+  Minus,
+  Star,
+  SquarePause,
+  Shapes,
   type IconNode,
   DiamondMinus,
 } from "lucide";
@@ -122,7 +128,13 @@ const ICONS = {
   x: X,
   minimize: Minimize,
   rotate: RotateCcw,
+  hexagon: Hexagon,
+  triangle: Triangle,
+  minus: Minus,
+  star: Star,
+  square: SquarePause,
 
+  shapes: Shapes,
   /* Transitions — extended */
   sun: Sun,
   "arrow-down": ArrowDown,

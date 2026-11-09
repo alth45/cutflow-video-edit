@@ -358,7 +358,13 @@ function renderClip(
   /* Label */
   const label = el("div", { className: "clip-label" });
   const iconName =
-    clip.kind === "text" ? "text" : clip.kind === "audio" ? "music" : "film";
+    clip.kind === "text"
+      ? "text"
+      : clip.kind === "audio"
+        ? "music"
+        : clip.kind === "shape"
+          ? "shapes"
+          : "film";
   label.append(
     createIcon(iconName),
     el("span", { className: "clip-label-text", text: clip.name }),
