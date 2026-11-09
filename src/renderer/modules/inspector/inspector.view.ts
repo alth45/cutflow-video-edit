@@ -355,19 +355,19 @@ function renderSwitchRow(
 }
 
 function renderCurveRow(activeClip: Clip | undefined): HTMLElement {
-  const box = el('div', { className: 'curve-box' });
+  const box = el("div", { className: "curve-box" });
   if (activeClip) {
-    box.dataset['clipId'] = activeClip.id;
+    box.dataset["clipId"] = activeClip.id;
   }
 
   const curve: ClipCurve = activeClip?.color?.curve ?? DEFAULT_CURVE;
   const points = curve.points;
 
-  /* SVG path (background grid + curve) */
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 100 74');
-  svg.setAttribute('preserveAspectRatio', 'none');
-  svg.classList.add('curve-svg');
+  /* SVG background grid + curve path */
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 100 74");
+  svg.setAttribute("preserveAspectRatio", "none");
+  svg.classList.add("curve-svg");
   svg.innerHTML = `
     <line x1="0" y1="37" x2="100" y2="37" stroke="#1d2432" stroke-width="1"/>
     <line x1="50" y1="0" x2="50" y2="74" stroke="#1d2432" stroke-width="1"/>
@@ -377,11 +377,11 @@ function renderCurveRow(activeClip: Clip | undefined): HTMLElement {
   `;
   box.append(svg);
 
-  /* Interactive points layer (HTML divs for easy hit-area) */
-  const pointsLayer = el('div', { className: 'curve-points' });
+  /* Interactive points layer */
+  const pointsLayer = el("div", { className: "curve-points" });
   points.forEach((p, i) => {
-    const pt = el('div', { className: 'curve-point' });
-    pt.dataset['index'] = String(i);
+    const pt = el("div", { className: "curve-point" });
+    pt.dataset["index"] = String(i);
     pt.style.left = `${p.x}%`;
     pt.style.top = `${100 - p.y}%`;
     pt.title = `${Math.round(p.x)} → ${Math.round(p.y)} (double-click to remove)`;
@@ -389,7 +389,15 @@ function renderCurveRow(activeClip: Clip | undefined): HTMLElement {
   });
   box.append(pointsLayer);
 
-  /* Preload filter so preview applies immediately. */
+  /* Reset button (top-right overlay) */
+  const resetBtn = el("button", {
+    className: "curve-reset-btn",
+    attrs: { type: "button", title: "Reset curve to default" },
+  });
+  resetBtn.append(createIcon("rotate"));
+  box.append(resetBtn);
+
+  /* Preload SVG filter so preview applies immediately */
   if (activeClip?.color?.curve) {
     curveFilterPart(activeClip.id, activeClip.color.curve);
   }

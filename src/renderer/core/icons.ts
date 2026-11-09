@@ -45,6 +45,7 @@ import {
   ArrowDown,
   Columns2,
   Minimize,
+  RotateCcw,
   type IconNode,
   DiamondMinus,
 } from "lucide";
@@ -120,6 +121,7 @@ const ICONS = {
   alert: AlertTriangle,
   x: X,
   minimize: Minimize,
+  rotate: RotateCcw,
 
   /* Transitions — extended */
   sun: Sun,

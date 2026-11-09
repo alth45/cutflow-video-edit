@@ -301,6 +301,58 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /* ============================================================
+   CURVE RESET BUTTON (F14ao)
+   ------------------------------------------------------------
+   Small overlay button di pojok kanan-atas curve box.
+   Muted default → accent on hover.
+   ============================================================ */
+.curve-reset-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  color: var(--muted-2);
+  cursor: pointer;
+  z-index: 10;
+  opacity: 0.6;
+  transition:
+    opacity var(--duration-fast),
+    color var(--duration-fast),
+    background var(--duration-fast),
+    border-color var(--duration-fast);
+}
+
+.curve-reset-btn:hover {
+  opacity: 1;
+  color: var(--text);
+  background: rgba(124, 92, 255, 0.2);
+  border-color: var(--accent);
+}
+
+.curve-reset-btn:active {
+  transform: scale(0.92);
+}
+
+.curve-reset-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  opacity: 1;
+}
+
+.curve-reset-btn svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2.5;
+}
+
+/* ============================================================
    INACTIVE STATE (F14q)
    ------------------------------------------------------------
    Saat tidak ada clip video yang di-select, seluruh panel-body

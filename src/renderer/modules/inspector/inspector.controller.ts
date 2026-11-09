@@ -234,7 +234,8 @@ export function attachInspectorController(view: InspectorView): () => void {
 
   const onCurveMouseDown = (ev: MouseEvent, box: HTMLElement): void => {
     if (ev.button !== 0) return;
-
+    /* Skip drag-start kalau klik di tombol reset. */
+    if ((ev.target as Element).closest(".curve-reset-btn")) return;
     const state = appStore.getState();
     const activeClip = getActiveClipFromStore();
     if (!activeClip) return;
@@ -345,6 +346,19 @@ export function attachInspectorController(view: InspectorView): () => void {
     document.removeEventListener("mousemove", onCurveMouseMove);
     document.removeEventListener("mouseup", onCurveMouseUp);
   });
+
+  /* ---- Reset curve button ---- */
+  cleanups.push(
+    delegate(view.root, "click", ".curve-reset-btn", (ev) => {
+      ev.stopPropagation();
+      ev.preventDefault();
+
+      const clip = getActiveClipFromStore();
+      if (!clip) return;
+
+      actions.setClipCurve(clip.id, DEFAULT_CURVE.points);
+    }),
+  );
 
   return () => cleanups.forEach((fn) => fn());
 }
