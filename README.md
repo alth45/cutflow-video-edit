@@ -76,16 +76,83 @@ cutflow/
 │   │   │   └── Store.ts              # State store
 │   │   ├── modules/                  # Modul fitur
 │   │   │   ├── animations/           # Definisi animasi
+│   │   │   │   └── animation-definitions.ts
 │   │   │   ├── effects/              # Efek video
+│   │   │   │   ├── curve.logic.ts
+│   │   │   │   ├── effect-definitions.ts
+│   │   │   │   └── effect.logic.ts
 │   │   │   ├── export/               # Modul export
+│   │   │   │   ├── audio-encoder.ts
+│   │   │   │   ├── export.modal.ts
+│   │   │   │   ├── export.service.ts
+│   │   │   │   └── frame-renderer.ts
 │   │   │   ├── inspector/            # Panel inspector
+│   │   │   │   ├── inspector.controller.ts
+│   │   │   │   ├── inspector.logic.ts
+│   │   │   │   ├── inspector.module.ts
+│   │   │   │   └── inspector.view.ts
 │   │   │   ├── keyboard/             # Shortcut keyboard
+│   │   │   │   ├── keyboard.logic.ts
+│   │   │   │   └── keyboard.module.ts
 │   │   │   ├── keyframes/            # Animasi keyframe
+│   │   │   │   └── keyframe.logic.ts
 │   │   │   ├── media/                # Manajemen media
+│   │   │   │   ├── media-drag.ts
+│   │   │   │   ├── media.controller.ts
+│   │   │   │   ├── media.logic.ts
+│   │   │   │   ├── media.module.ts
+│   │   │   │   ├── media.view.ts
+│   │   │   │   └── probe-duration.logic.ts
 │   │   │   ├── preview/              # Preview video
-│   │   │   ├── text-editor/          # Editor teks
+│   │   │   │   ├── audio-engine.ts
+│   │   │   │   ├── overlay-drag.logic.ts
+│   │   │   │   ├── playback.logic.ts
+│   │   │   │   ├── playback.ticker.ts
+│   │   │   │   ├── preview.audio-sync.ts
+│   │   │   │   ├── preview.chroma.ts
+│   │   │   │   ├── preview.clip-visual.ts
+│   │   │   │   ├── preview.composite.ts
+│   │   │   │   ├── preview.controller.ts
+│   │   │   │   ├── preview.curve.ts
+│   │   │   │   ├── preview.logic.ts
+│   │   │   │   ├── preview.module.ts
+│   │   │   │   ├── preview.overlay-drag.ts
+│   │   │   │   ├── preview.overlay-resize.ts
+│   │   │   │   ├── preview.selection-overlay.ts
+│   │   │   │   ├── preview.view.ts
+│   │   │   │   └── preview.visual-transform.ts
+│   │   │   ├── shapes/               # Bentuk/objek bentuk
+│   │   │   │   └── shape-definitions.ts
+│   │   │   ├── toast/                # Notifikasi toast
+│   │   │   │   ├── toast.logic.ts
+│   │   │   │   ├── toast.module.ts
+│   │   │   │   └── toast.view.ts
 │   │   │   ├── timeline/             # Panel timeline
+│   │   │   │   ├── clip-context-menu.ts
+│   │   │   │   ├── clip-drag.controller.ts
+│   │   │   │   ├── clip-drag.logic.ts
+│   │   │   │   ├── clip-junction.logic.ts
+│   │   │   │   ├── clip-marquee.logic.ts
+│   │   │   │   ├── clip-split.logic.ts
+│   │   │   │   ├── clip-trim.controller.ts
+│   │   │   │   ├── clip-trim.logic.ts
+│   │   │   │   ├── hand-pan.controller.ts
+│   │   │   │   ├── marquee.controller.ts
+│   │   │   │   ├── media-drop.controller.ts
+│   │   │   │   ├── text-editor.module.ts
+│   │   │   │   ├── text-tool.controller.ts
+│   │   │   │   ├── timeline-drop.logic.ts
+│   │   │   │   ├── timeline.controller.ts
+│   │   │   │   ├── timeline.logic.ts
+│   │   │   │   ├── timeline.module.ts
+│   │   │   │   ├── timeline.view.ts
+│   │   │   │   ├── transition-kind-menu.ts
+│   │   │   │   └── waveform.logic.ts
 │   │   │   └── topbar/               # Top bar
+│   │   │       ├── menu.controller.ts
+│   │   │       ├── menu.logic.ts
+│   │   │       ├── topbar.module.ts
+│   │   │       └── topbar.view.ts
 │   │   ├── state/                    # Manajemen state
 │   │   │   ├── appStore.ts           # Store utama
 │   │   │   ├── clipboard.ts          # State clipboard
@@ -104,6 +171,7 @@ cutflow/
 │   │   │       ├── playback.actions.ts
 │   │   │       ├── project.actions.ts
 │   │   │       ├── selection.actions.ts
+│   │   │       ├── shape.actions.ts
 │   │   │       ├── text.actions.ts
 │   │   │       ├── track.actions.ts
 │   │   │       ├── transition.actions.ts
@@ -115,6 +183,7 @@ cutflow/
 │   │   │   ├── tokens.css
 │   │   │   └── components/           # Gaya komponen
 │   │   │       ├── animations.css
+│   │   │       ├── clip-context-menu.css
 │   │   │       ├── dialog.css
 │   │   │       ├── export-modal.css
 │   │   │       ├── inspector.css

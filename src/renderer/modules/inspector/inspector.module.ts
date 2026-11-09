@@ -24,6 +24,9 @@ import {
   findKeyframeAt,
 } from "@modules/keyframes/keyframe.logic";
 import { setClipChromaKey } from "@renderer/state/actions";
+import { curveToPath, isDefaultCurve } from "@modules/effects/curve.logic";
+import { DEFAULT_CURVE } from "@shared/types/timeline";
+import { removeCurveFilter } from "@modules/preview/preview.curve";
 
 export function mountInspector(container: HTMLElement): () => void {
   const initial = appStore.getState();
@@ -153,8 +156,49 @@ function syncClipPropertiesFromClip(view: InspectorView, clip: Clip): void {
     }
   }
   syncSegmentedButtons(view, clip);
+  syncCurveEditor(view, clip); 
 }
+/* ============================================================
+   CURVE EDITOR SYNC (F14ao fix)
+   ------------------------------------------------------------
+   Re-render SVG path + curve points positions ketika curve
+   state berubah (dari luar — reset, undo/redo, load project).
 
+   Saat curve = default → hapus SVG filter element (cleanup).
+   ============================================================ */
+function syncCurveEditor(view: InspectorView, clip: Clip): void {
+  const box = view.root.querySelector<HTMLElement>(".curve-box");
+  if (!box) return;
+
+  const curve = clip.color?.curve ?? DEFAULT_CURVE;
+  const points = curve.points;
+
+  /* 1. Update SVG path (curve line). */
+  const pathEl = box.querySelector<SVGPathElement>(".curve-svg path");
+  if (pathEl) {
+    pathEl.setAttribute("d", curveToPath(points, 74));
+  }
+
+  /* 2. Rebuild interactive points layer. */
+  const pointsLayer = box.querySelector<HTMLElement>(".curve-points");
+  if (pointsLayer) {
+    pointsLayer.replaceChildren();
+    points.forEach((p, i) => {
+      const pt = document.createElement("div");
+      pt.className = "curve-point";
+      pt.dataset["index"] = String(i);
+      pt.style.left = `${p.x}%`;
+      pt.style.top = `${100 - p.y}%`;
+      pt.title = `${Math.round(p.x)} → ${Math.round(p.y)} (double-click to remove)`;
+      pointsLayer.appendChild(pt);
+    });
+  }
+
+  /* 3. Cleanup filter element kalau curve = identity (default). */
+  if (isDefaultCurve(curve)) {
+    removeCurveFilter(clip.id);
+  }
+}
 function syncKeyframeButtons(
   view: InspectorView,
   state: AppState,
