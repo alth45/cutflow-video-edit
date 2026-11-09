@@ -149,3 +149,16 @@ export function setClipCurve(
     return { ...clip, color: { ...current, curve: nextCurve } };
   });
 }
+
+/**
+ * Reset color correction ke default (exposure/contrast/saturation/temp/curve).
+ * 1 history entry. No-op kalau sudah default.
+ */
+export function resetClipColor(clipId: string): void {
+  patchClip(clipId, (clip) => {
+    const current = clip.color ?? DEFAULT_CLIP_COLOR;
+    if (JSON.stringify(current) === JSON.stringify(DEFAULT_CLIP_COLOR))
+      return null;
+    return { ...clip, color: DEFAULT_CLIP_COLOR };
+  });
+}

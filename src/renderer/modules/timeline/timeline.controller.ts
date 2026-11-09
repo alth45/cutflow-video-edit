@@ -12,7 +12,8 @@ import { attachHandPan } from "./hand-pan.controller";
 import { attachTextTool, handleTextClipDblClick } from "./text-tool.controller";
 import { openTransitionKindMenu } from "./transition-kind-menu";
 import type { TimelineView } from "./timeline.view";
-
+import { openClipContextMenu } from "./clip-context-menu";
+import type { EffectKind } from "@shared/types/timeline";
 /* ============================================================
    TIMELINE CONTROLLER — ORCHESTRATOR
    ------------------------------------------------------------
@@ -233,6 +234,75 @@ export function attachTimelineController(view: TimelineView): () => void {
           }
         },
         existing ? () => actions.removeTransition(existing.id) : undefined,
+      );
+    }),
+  );
+
+  /* ---- Clip right-click → context menu (F14ap) ---- */
+  cleanups.push(
+    on(view.tracksContainer, "contextmenu", (ev) => {
+      const target = ev.target;
+      if (!(target instanceof Element)) return;
+
+      /* Skip transition box (handled by its own contextmenu). */
+      if (target.closest(".transition-box")) return;
+
+      const clipEl = target.closest<HTMLElement>(".clip");
+      if (!clipEl) return;
+
+      const clipId = clipEl.dataset["clipId"];
+      if (!clipId) return;
+
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      const state = appStore.getState();
+      const clip = getClipById(state, clipId);
+      if (!clip) return;
+
+      const track = state.project.sequence.tracks.find((t) =>
+        t.clips.some((c) => c.id === clipId),
+      );
+      if (!track) return;
+
+      /* Select clip if not already (visual context). */
+      if (!state.selection.selectedClipIds.includes(clipId)) {
+        actions.selectClip(clipId);
+      }
+
+      const activeKinds = new Set<EffectKind>();
+      for (const e of clip.effects ?? []) {
+        if (e.enabled) activeKinds.add(e.kind);
+      }
+
+      const isLocked = track.locked;
+
+      openClipContextMenu(
+        clipEl,
+        activeKinds,
+        (kind) => {
+          if (isLocked) return;
+          actions.addEffectToClip(clipId, kind);
+        },
+        (actionId) => {
+          switch (actionId) {
+            case "reset-effects":
+              if (!isLocked) actions.clearClipEffects(clipId);
+              break;
+            case "reset-color":
+              if (!isLocked) actions.resetClipColor(clipId);
+              break;
+            case "copy":
+              actions.copySelection();
+              break;
+            case "cut":
+              if (!isLocked) actions.cutSelection();
+              break;
+            case "delete":
+              if (!isLocked) actions.deleteClip(clipId);
+              break;
+          }
+        },
       );
     }),
   );

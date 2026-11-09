@@ -62,6 +62,38 @@ function effectToFilterString(effect: ClipEffect): string | null {
       return `drop-shadow(0 ${offsetY.toFixed(1)}px ${blur.toFixed(1)}px rgba(0,0,0,${alpha.toFixed(2)}))`;
     }
 
+    /* ---- Detail / stylize (F14ap) ---- */
+    case "sharpen": {
+      /* Approximation: contrast + slight saturate boost.
+         True sharpen needs SVG convolve kernel (future). */
+      const contrast = 1 + t * 0.4; // 1.0..1.4
+      const saturate = 1 + t * 0.15; // 1.0..1.15
+      return `contrast(${contrast.toFixed(3)}) saturate(${saturate.toFixed(3)})`;
+    }
+
+    case "glow": {
+      /* Soft stacked halo. 2-layer drop-shadow for smooth falloff. */
+      const blur1 = 3 + t * 10; // 3..13px
+      const blur2 = 8 + t * 20; // 8..28px
+      const alpha = 0.4 + t * 0.5; // 0.4..0.9
+      const a2 = alpha * 0.5;
+      return `drop-shadow(0 0 ${blur1.toFixed(1)}px rgba(255,220,150,${alpha.toFixed(2)})) drop-shadow(0 0 ${blur2.toFixed(1)}px rgba(255,220,150,${a2.toFixed(2)}))`;
+    }
+
+    case "hdr": {
+      /* Punchy local-contrast simulation: high contrast + saturated. */
+      const contrast = 1 + t * 0.35;
+      const saturate = 1 + t * 0.4;
+      const brightness = 1 + t * 0.05;
+      return `contrast(${contrast.toFixed(3)}) saturate(${saturate.toFixed(3)}) brightness(${brightness.toFixed(3)})`;
+    }
+
+    case "tonal-contrast": {
+      /* Midtone contrast: darken slightly + boost contrast. */
+      const contrast = 1 + t * 0.25;
+      const brightness = 1 - t * 0.08;
+      return `contrast(${contrast.toFixed(3)}) brightness(${brightness.toFixed(3)})`;
+    }
     /* ---- Presets (combinations) ---- */
     case "vintage": {
       /* Classic faded-photo look: muted + warm. */

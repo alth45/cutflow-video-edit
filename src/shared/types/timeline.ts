@@ -197,7 +197,6 @@ export const DEFAULT_CHROMA_KEY: ClipChromaKey = Object.freeze({
    Effect yang di-apply pada clip. Params fleksibel per-kind
    (blur pakai 'amount' px, grayscale pakai 'amount' %, dst.).
    ============================================================ */
-
 export type EffectKind =
   /* --- Filter primitives --- */
   | "blur"
@@ -209,7 +208,12 @@ export type EffectKind =
   | "hue-rotate"
   | "invert"
   | "drop-shadow"
-  /* --- Filter presets (combinations) --- */
+  /* --- Detail / stylize (NEW) --- */
+  | "sharpen"
+  | "glow"
+  | "hdr"
+  | "tonal-contrast"
+  /* --- Filter presets --- */
   | "vintage"
   | "cinematic"
   | "dreamy"
@@ -218,7 +222,7 @@ export type EffectKind =
   | "faded"
   | "warm"
   | "cool"
-  /* --- Overlay (handled via ::after) --- */
+  /* --- Overlay --- */
   | "vignette";
 
 export interface ClipEffect {

@@ -196,6 +196,73 @@ export const EFFECT_DEFINITIONS: readonly EffectDef[] = [
   },
 
   /* ============================================================
+     DETAIL / STYLIZE (F14ap)
+     ============================================================ */
+  {
+    kind: "sharpen",
+    name: "Sharpen",
+    sub: "Detail",
+    gradientIndex: 6,
+    params: [
+      {
+        key: "amount",
+        label: "Amount",
+        min: 0,
+        max: 100,
+        step: 1,
+        defaultValue: 60,
+      },
+    ],
+  },
+  {
+    kind: "glow",
+    name: "Glow",
+    sub: "Stylize",
+    gradientIndex: 5,
+    params: [
+      {
+        key: "amount",
+        label: "Intensity",
+        min: 0,
+        max: 100,
+        step: 1,
+        defaultValue: 60,
+      },
+    ],
+  },
+  {
+    kind: "hdr",
+    name: "HDR",
+    sub: "Presets",
+    gradientIndex: 7,
+    params: [
+      {
+        key: "amount",
+        label: "Strength",
+        min: 0,
+        max: 100,
+        step: 1,
+        defaultValue: 70,
+      },
+    ],
+  },
+  {
+    kind: "tonal-contrast",
+    name: "Tonal Contrast",
+    sub: "Detail",
+    gradientIndex: 4,
+    params: [
+      {
+        key: "amount",
+        label: "Amount",
+        min: 0,
+        max: 100,
+        step: 1,
+        defaultValue: 60,
+      },
+    ],
+  },
+  /* ============================================================
      FILTER PRESETS (new — F14aj)
      Presets combine 2-3 CSS filters untuk look khas.
      `amount` (0-100) scale intensitas preset.

@@ -71,3 +71,14 @@ export function toggleClipAnimation(clipId: string, kind: AnimationKind): void {
     return { ...clip, animation: next };
   });
 }
+
+/**
+ * Clear semua effect dari clip. 1 history entry.
+ * No-op kalau clip kosong dari effects.
+ */
+export function clearClipEffects(clipId: string): void {
+  patchClip(clipId, (clip) => {
+    if (!clip.effects || clip.effects.length === 0) return null;
+    return { ...clip, effects: [] };
+  });
+}
