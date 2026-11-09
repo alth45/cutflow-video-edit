@@ -6,7 +6,7 @@ import { serializeProject, parseProject } from "@state/project-serializer";
 import { makeId } from "@utils/id";
 import type { MediaAsset, MediaAssetKind } from "@shared/types/project";
 import { probeMediaDuration } from "@modules/media/probe-duration.logic";
-import { mediaUrl, isDemoPath } from "@utils/media-url";
+import { mediaUrl } from "@utils/media-url";
 import { countClipsUsingAssets } from "@state/selectors";
 
 import { openExportModal } from "@modules/export/export.modal";

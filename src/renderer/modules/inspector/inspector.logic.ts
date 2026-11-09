@@ -13,9 +13,7 @@
 import type { InspectorPanelTab } from "@shared/types/state";
 import type {
   ClipTransform,
-  ClipColor,
   ClipAudio,
-  ClipChromaKey,
   NumericClipColorKey,
 } from "@shared/types/timeline";
 import type { KeyframeableTransformKey } from "@shared/types/timeline";

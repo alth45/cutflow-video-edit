@@ -13,7 +13,7 @@ export function loadProject(project: Project): void {
     project,
     isDirty: false,
     history: { past: [], future: [] },
-    playback: { playing: false, currentTimeSec: 0 },
+    playback: { ...state.playback, playing: false, currentTimeSec: 0 },
     selection: {
       selectedClipIds: [],
       activeTrackId: null,

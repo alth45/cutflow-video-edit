@@ -1,5 +1,5 @@
 import type { AppState } from "@shared/types/state";
-import type { Project, Sequence, MediaAsset } from "@shared/types/project";
+import type { Sequence, MediaAsset } from "@shared/types/project";
 import { TIMELINE } from "@shared/constants";
 import type {
   Track,
@@ -233,7 +233,7 @@ export function getClipMedia(
   state: AppState,
   clip: Clip,
 ): MediaAsset | undefined {
-  if (clip.source.kind === "text") return undefined;
+  if (clip.source.kind !== "media") return undefined;
   return getMediaById(state, clip.source.mediaId);
 }
 
@@ -295,6 +295,13 @@ export function getMaxClipDuration(state: AppState, clip: Clip): number {
   if (remaining <= 0) return 0;
 
   if (clip.source.kind === "text") return remaining;
+
+  /* Sebelum akses mediaId — */
+  if (clip.source.kind !== "media") {
+    /* Hanya shape/text/nested (non-media) → tanpa batas asset. */
+    const remaining = TIMELINE.MAX_SEQUENCE_DURATION_SEC - clip.startSec;
+    return Math.max(0, remaining);
+  }
 
   const asset = getMediaById(state, clip.source.mediaId);
   const assetDur = asset?.durationSec;

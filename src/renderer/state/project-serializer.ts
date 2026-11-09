@@ -8,7 +8,6 @@ import {
   DEFAULT_SHAPE_STYLE,
 } from "@shared/types/timeline";
 import { DEFAULT_CHROMA_KEY } from "@shared/types/timeline";
-import { DEFAULT_CURVE } from "@shared/types/timeline";
 /* ============================================================
    PROJECT SERIALIZER
    ------------------------------------------------------------

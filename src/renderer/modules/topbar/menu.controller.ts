@@ -16,7 +16,6 @@ import type { TopbarView } from "./topbar.view";
  */
 export function attachMenuController(
   view: TopbarView,
-  container: HTMLElement,
   onAction: (actionId: MenuActionId) => void,
 ): () => void {
   let openMenuId: MenuId | null = null;

@@ -25,7 +25,7 @@ export function mountTopbar(container: HTMLElement): () => void {
   const view = renderTopbar();
   container.append(view.brand, view.menubar, view.topbarRight);
 
-  const detach = attachMenuController(view, container, handleAction);
+  const detach = attachMenuController(view, handleAction);
 
   return () => {
     detach();

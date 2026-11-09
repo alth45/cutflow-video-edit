@@ -1,7 +1,7 @@
 import { setChildren } from "@core/Dom";
 import { appStore } from "@state/appStore";
 import type { AppState } from "@shared/types/state";
-import type { Clip, ClipChromaKey } from "@shared/types/timeline";
+import type { Clip } from "@shared/types/timeline";
 import {
   DEFAULT_CLIP_TRANSFORM,
   DEFAULT_CLIP_COLOR,
@@ -23,7 +23,6 @@ import {
   hasKeyframes,
   findKeyframeAt,
 } from "@modules/keyframes/keyframe.logic";
-import { setClipChromaKey } from "@renderer/state/actions";
 import { curveToPath, isDefaultCurve } from "@modules/effects/curve.logic";
 import { DEFAULT_CURVE } from "@shared/types/timeline";
 import { removeCurveFilter } from "@modules/preview/preview.curve";
@@ -156,7 +155,7 @@ function syncClipPropertiesFromClip(view: InspectorView, clip: Clip): void {
     }
   }
   syncSegmentedButtons(view, clip);
-  syncCurveEditor(view, clip); 
+  syncCurveEditor(view, clip);
 }
 /* ============================================================
    CURVE EDITOR SYNC (F14ao fix)

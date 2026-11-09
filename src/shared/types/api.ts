@@ -23,7 +23,18 @@ export interface AppInfo {
   /** Versi Electron runtime (mis. "33.2.1"). */
   readonly electron: string;
   /** Platform: 'darwin' | 'win32' | 'linux'. */
-  readonly platform: NodeJS.Platform;
+  readonly platform:
+    | "aix"
+    | "android"
+    | "darwin"
+    | "freebsd"
+    | "haiku"
+    | "linux"
+    | "openbsd"
+    | "sunos"
+    | "win32"
+    | "cygwin"
+    | "netbsd";
   /** True kalau app dijalankan dari .exe/.app hasil build. */
   readonly isPackaged: boolean;
 }

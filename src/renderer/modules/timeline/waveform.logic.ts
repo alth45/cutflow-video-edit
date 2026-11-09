@@ -29,7 +29,6 @@ function hashString(str: string): number {
 export function generateWaveform(clipId: string, bars = 64): number[] {
   const out: number[] = [];
   let seed = hashString(clipId);
-  const TWO_PI = Math.PI * 2;
 
   for (let i = 0; i < bars; i++) {
     // LCG step untuk pseudo-random deterministik.

@@ -1,7 +1,7 @@
 import { el, on } from "@core/Dom";
 import { createIcon } from "@core/icons";
 import { createDropdown, type DropdownItem } from "@core/dropdown";
-import { DEFAULT_TEXT_STYLE, type TextClipStyle } from "@shared/types/timeline";
+import { type TextClipStyle } from "@shared/types/timeline";
 
 /* ============================================================
    TEXT EDITOR MODAL (F14z)

@@ -1,5 +1,5 @@
 import type { AppState } from "@shared/types/state";
-import { DEFAULT_CLIP_AUDIO, DEFAULT_TEXT_STYLE } from "@shared/types/timeline";
+import { DEFAULT_TEXT_STYLE } from "@shared/types/timeline";
 import {
   getActiveClipsAtTime,
   getTransitionSample,

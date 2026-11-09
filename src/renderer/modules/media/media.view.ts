@@ -21,7 +21,6 @@ import {
   type AnimationDef,
 } from "@modules/animations/animation-definitions";
 import { SHAPE_DEFINITIONS } from "@modules/shapes/shape-definitions";
-import type { ShapeKind } from "@shared/types/timeline";
 
 /* ============================================================
    MEDIA VIEW

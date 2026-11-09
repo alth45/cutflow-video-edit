@@ -42,7 +42,7 @@
        'shortcut:undo': void;
      };
    ============================================================ */
-export type EventMap = Record<string, unknown>;
+export type EventMap = object;
 
 export type EventHandler<P> = (payload: P) => void;
 export type Unsubscribe = () => void;

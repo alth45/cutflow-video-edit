@@ -7,7 +7,6 @@ import {
   type RowDef,
   type SliderRow,
   type SwitchRow,
-  type TabDef,
 } from "./inspector.logic";
 import type { AppState, InspectorPanelTab } from "@shared/types/state";
 import type {
@@ -26,10 +25,7 @@ import {
 import { type SegmentedRow } from "./inspector.logic";
 import { curveToPath } from "@modules/effects/curve.logic";
 import { DEFAULT_CURVE, type ClipCurve } from "@shared/types/timeline";
-import {
-  ensureCurveFilter,
-  curveFilterPart,
-} from "@modules/preview/preview.curve";
+import { curveFilterPart } from "@modules/preview/preview.curve";
 
 export interface SliderRef {
   readonly input: HTMLInputElement;

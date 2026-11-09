@@ -6,7 +6,7 @@ import { mountInspector } from "@modules/inspector/inspector.module";
 import { mountTimeline } from "@modules/timeline/timeline.module";
 import { mountKeyboard } from "@modules/keyboard/keyboard.module";
 import { mountToast } from "@modules/toast/toast.module";
-import { seedDemoMedia, seedDemoClips } from "@state/demo";
+import { seedDemoMedia } from "@state/demo";
 import { appStore } from "@state/appStore";
 
 let shell: AppShell | null = null;

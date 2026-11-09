@@ -1,6 +1,6 @@
 import type { AppState } from "@shared/types/state";
 import { DEFAULT_CLIP_AUDIO } from "@shared/types/timeline";
-import { getMediaById, getContentDurationSec } from "@state/selectors";
+import { getContentDurationSec } from "@state/selectors";
 import { mediaUrl } from "@utils/media-url";
 
 /* ============================================================

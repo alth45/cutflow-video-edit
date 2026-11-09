@@ -54,7 +54,6 @@ import {
   Shapes,
   Layers,
   type IconNode,
-  DiamondMinus,
 } from "lucide";
 /* ============================================================
    ICONS — LUCIDE REGISTRY

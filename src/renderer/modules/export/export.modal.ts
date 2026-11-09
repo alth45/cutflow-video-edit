@@ -1,4 +1,4 @@
-import { el, on } from "@core/Dom";
+import { el } from "@core/Dom";
 
 export interface ExportModal {
   readonly update: (progress: number, phase: string, detail?: string) => void;
