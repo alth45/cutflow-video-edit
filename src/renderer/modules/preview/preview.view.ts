@@ -80,7 +80,8 @@ export function renderPreview(state: AppState): PreviewView {
   /* ---------- Stage + monitor ---------- */
   const stage = el("div", { className: "stage" });
   const monitor = el("div", { className: "monitor" });
-
+  monitor.style.setProperty("--aspect-w", String(seq.width));
+  monitor.style.setProperty("--aspect-h", String(seq.height));
   const inner = el("div", { className: "monitor-inner" });
 
   /* Empty state — tampil saat sequence tidak punya clip sama sekali. */

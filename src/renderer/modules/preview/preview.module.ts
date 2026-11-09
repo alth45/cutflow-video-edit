@@ -67,10 +67,13 @@ export function mountPreview(container: HTMLElement): () => void {
     }
 
     /* Sequence meta (duration, fps) */
+    /* Sequence change → duration/meta + aspect ratio */
     if (state.project.sequence !== prev.project.sequence) {
       const seq = state.project.sequence;
       view.tcDuration.textContent = formatTimecode(seq.durationSec, seq.fps);
       view.seqMeta.textContent = `${seq.width} × ${seq.height} · ${seq.fps} fps`;
+      view.monitor.style.setProperty("--aspect-w", String(seq.width));
+      view.monitor.style.setProperty("--aspect-h", String(seq.height));
     }
 
     /* Composite re-render triggers */

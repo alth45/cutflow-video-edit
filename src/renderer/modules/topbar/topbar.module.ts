@@ -11,6 +11,8 @@ import * as actions from "@state/actions";
 import { appStore } from "@state/appStore";
 import { openDialog } from "@core/dialog";
 import { eventBus } from "@core/events";
+import { openSequenceSettings } from "@modules/sequence/sequence-settings.modal";
+import { getContentDurationSec } from "@state/selectors";
 
 function toast(
   message: string,
@@ -121,7 +123,7 @@ function handleAction(id: MenuActionId): void {
       return;
 
     case "seq:settings":
-      toast("Sequence settings coming soon", "info");
+      void handleSequenceSettings();
       return;
 
     case "seq:add-track":
@@ -135,7 +137,7 @@ function handleAction(id: MenuActionId): void {
       return;
 
     case "help:docs":
-      toast("Documentation coming soon", "info");
+      void showDocumentationDialog();
       return;
 
     case "help:about":
@@ -222,4 +224,105 @@ async function showAboutDialog(): Promise<void> {
     `,
     confirmLabel: "Close",
   });
+}
+
+/* ============================================================
+   HELP → DOCUMENTATION (F14ar)
+   ------------------------------------------------------------
+   Offline documentation modal. Structured sections dengan
+   inline code + kbd shortcuts. Read-only, tutup via OK/Escape.
+   ============================================================ */
+
+async function showDocumentationDialog(): Promise<void> {
+  await openDialog({
+    title: "CutFlow Documentation",
+    content: `
+      <div class="doc-body">
+
+        <h3>Getting Started</h3>
+        <ul>
+          <li><b>Import media</b> — <kbd>Ctrl+I</kbd> atau tombol <code>+</code> di panel Media.</li>
+          <li><b>Add to timeline</b> — Tarik thumbnail dari bin ke track video atau audio.</li>
+          <li><b>Playback</b> — <kbd>Space</kbd> untuk play/pause, <kbd>←</kbd> / <kbd>→</kbd> untuk step frame, <kbd>Home</kbd> / <kbd>End</kbd> ke awal/akhir.</li>
+        </ul>
+
+        <h3>Editing Clips</h3>
+        <ul>
+          <li><b>Move clip</b> — Drag clip ke kiri/kanan. Snap otomatis ke clip edge, playhead, dan boundary.</li>
+          <li><b>Trim clip</b> — Drag tepi kanan clip untuk ubah durasi. Video/audio dibatasi durasi sumber.</li>
+          <li><b>Split clip</b> — <kbd>Ctrl+K</kbd> di playhead, atau pilih <b>Razor tool</b> lalu klik clip.</li>
+          <li><b>Delete</b> — <kbd>Del</kbd> atau <kbd>Backspace</kbd>.</li>
+          <li><b>Multi-select</b> — <kbd>Ctrl+Click</kbd> untuk tambah, <kbd>Shift+Click</kbd> untuk range, drag di empty area untuk marquee.</li>
+        </ul>
+
+        <h3>Effects &amp; Color</h3>
+        <ul>
+          <li><b>Effects tab</b> — Klik item untuk apply/toggle (22 efek: blur, sharpen, glow, HDR, vintage, cinematic, dll.).</li>
+          <li><b>Quick access</b> — Right-click clip di timeline → semua efek + reset actions.</li>
+          <li><b>Color correction</b> — Inspector <b>Color</b> tab: exposure, contrast, saturation, temp, curve editor.</li>
+          <li><b>Green screen</b> — Inspector <b>Video</b> → Chroma Key group → pilih Green/Blue + similarity.</li>
+        </ul>
+
+        <h3>Animation</h3>
+        <ul>
+          <li><b>Animation tab</b> — Klik animasi untuk toggle (shake, glitch, pulse, spin, dll.).</li>
+          <li><b>Text-specific</b> — Typewriter dan Neon Text (hanya muncul untuk text clip).</li>
+        </ul>
+
+        <h3>Transitions</h3>
+        <ul>
+          <li><b>Add transition</b> — Klik kotak di junction antara dua clip adjacent.</li>
+          <li><b>Change kind</b> — Right-click kotak transition → pilih dari 10 jenis (cross-dissolve, slide, wipe, circle, dll.).</li>
+          <li><b>Remove</b> — Klik kotak lalu tekan <kbd>Del</kbd>.</li>
+        </ul>
+
+        <h3>Text &amp; Shapes</h3>
+        <ul>
+          <li><b>Create text</b> — <b>Text tool</b> (<kbd>T</kbd>) → klik pada video track.</li>
+          <li><b>Edit text</b> — Double-click text clip. Modal untuk content + font + bold/italic/underline/stroke.</li>
+          <li><b>Insert shape</b> — <code>[Insert ▼]</code> dropdown di tab bar → <b>Shape</b> → klik geometri.</li>
+          <li><b>Drag overlay</b> — Pilih clip → drag selection box di preview untuk position, drag corner handles untuk scale.</li>
+        </ul>
+
+        <h3>Keyframes</h3>
+        <ul>
+          <li><b>Per property</b> — Klik tombol ◆ di kiri slider (Position X/Y, Scale, Rotation, Opacity).</li>
+          <li><b>All properties</b> — Klik tombol ◆ di toolbar timeline (add keyframe untuk semua 5 properties sekaligus).</li>
+          <li><b>Animate</b> — Drag slider saat ada keyframe → auto-add/update keyframe di playhead.</li>
+        </ul>
+
+        <h3>Saving &amp; Export</h3>
+        <ul>
+          <li><b>Save project</b> — <kbd>Ctrl+S</kbd>. Format <code>.cutflow.json</code>.</li>
+          <li><b>Open project</b> — <kbd>Ctrl+O</kbd>.</li>
+          <li><b>Export MP4</b> — <kbd>Ctrl+E</kbd> atau tombol <b>Export</b> di topbar. Render frame-accurate (H.264 + AAC).</li>
+          <li><b>Undo/Redo</b> — <kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Shift+Z</kbd> (atau <kbd>Ctrl+Y</kbd>).</li>
+        </ul>
+
+      </div>
+    `,
+    confirmLabel: "Close",
+  });
+}
+
+/* ============================================================
+   SEQUENCE SETTINGS
+   ============================================================ */
+async function handleSequenceSettings(): Promise<void> {
+  const state = appStore.getState();
+
+  const updates = await openSequenceSettings({
+    sequence: state.project.sequence,
+    contentEndSec: getContentDurationSec(state),
+  });
+  if (!updates) return;
+
+  const result = actions.updateSequenceSettings(updates);
+
+  if (!result.ok) {
+    toast(result.error, "error");
+    return;
+  }
+
+  toast("Sequence updated", "success");
 }

@@ -1,0 +1,172 @@
+/* ============================================================
+   SEQUENCE SETTINGS MODAL
+   ============================================================ */
+.seq-settings-modal {
+  width: min(520px, 92vw);
+  max-height: 85vh;
+}
+
+.seq-settings-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-4) 0;
+}
+
+/* ---- Row ---- */
+.seq-settings-row {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.seq-settings-row-stacked {
+  grid-template-columns: 96px 1fr;
+  align-items: flex-start;
+}
+
+.seq-settings-row label {
+  font-size: var(--text-size-120);
+  color: var(--muted);
+  font-weight: var(--fw-semibold);
+}
+
+/* ---- Inputs (text, number) ---- */
+.seq-settings-modal input[type="text"],
+.seq-settings-modal input[type="number"] {
+  width: 100%;
+  height: 32px;
+  padding: 0 var(--space-4);
+  background: var(--panel-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: var(--text-size-125);
+  font-variant-numeric: tabular-nums;
+  outline: 0;
+  transition: border-color var(--duration);
+}
+
+.seq-settings-modal input[type="text"]:focus,
+.seq-settings-modal input[type="number"]:focus {
+  border-color: var(--accent);
+}
+
+/* Remove number spinners (cleaner look) */
+.seq-settings-modal input[type="number"]::-webkit-outer-spin-button,
+.seq-settings-modal input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* ---- Resolution inputs ---- */
+.seq-settings-res-inputs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.seq-settings-res-inputs input {
+  width: 90px;
+}
+
+.seq-settings-res-x {
+  color: var(--muted-2);
+  font-size: var(--text-size-125);
+}
+
+/* ---- Preset buttons (resolution) ---- */
+.seq-settings-presets {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.seq-settings-preset-btn {
+  padding: 4px 10px;
+  background: var(--panel-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  color: var(--muted);
+  font-size: var(--text-size-105);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.seq-settings-preset-btn:hover {
+  background: rgba(124, 92, 255, 0.15);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* ---- FPS segmented ---- */
+.seq-settings-segmented {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--panel-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  width: fit-content;
+}
+
+.seq-settings-seg-btn {
+  padding: 5px 14px;
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  color: var(--muted);
+  font-size: var(--text-size-115);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+
+.seq-settings-seg-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.seq-settings-seg-btn.active {
+  background: rgba(124, 92, 255, 0.2);
+  color: #c4b6ff;
+  box-shadow: inset 0 0 0 1px rgba(124, 92, 255, 0.4);
+}
+
+/* ---- Custom FPS input ---- */
+.seq-settings-custom-fps {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--muted-2);
+  font-size: var(--text-size-110);
+}
+
+.seq-settings-custom-fps input {
+  width: 70px;
+}
+
+/* ---- Duration hint ---- */
+.seq-settings-hint {
+  font-size: var(--text-size-105);
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Error display ---- */
+.seq-settings-error {
+  padding: var(--space-3) var(--space-4);
+  background: rgba(255, 77, 109, 0.12);
+  border: 1px solid rgba(255, 77, 109, 0.35);
+  border-radius: var(--radius-sm);
+  color: var(--danger);
+  font-size: var(--text-size-115);
+}
+
+.seq-settings-error[hidden] {
+  display: none;
+}

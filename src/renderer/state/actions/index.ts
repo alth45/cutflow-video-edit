@@ -19,3 +19,4 @@ export * from "./text.actions";
 export * from "./clipboard.actions";
 export * from "./ui.actions";
 export * from "./shape.actions";
+export * from "./sequence.actions";
