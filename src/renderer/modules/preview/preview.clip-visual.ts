@@ -213,7 +213,7 @@ export function updateClipVisual(
     const video = el.querySelector<HTMLVideoElement>("video");
     if (video) {
       const clipAudio = clip.audio ?? DEFAULT_CLIP_AUDIO;
-      const muted = track.muted || clipAudio.muted;
+      const muted = state.playback.muted || track.muted || clipAudio.muted;
       const fadeMul =
         computeClipVolume(clip, Math.max(0, localTimeSec)) * sample.volume;
 

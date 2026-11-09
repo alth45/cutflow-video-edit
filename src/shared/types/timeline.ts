@@ -101,6 +101,28 @@ export const DEFAULT_CLIP_TRANSFORM: ClipTransform = Object.freeze({
 });
 
 /* ============================================================
+   COLOR CURVE (F14an)
+   ------------------------------------------------------------
+   Points: input → output mapping. Master curve (all RGB channels
+   equally). Sorted by x.
+   ============================================================ */
+export interface CurvePoint {
+  readonly x: number; // 0..100 (input level)
+  readonly y: number; // 0..100 (output level — 0=black, 100=white)
+}
+
+export interface ClipCurve {
+  readonly points: readonly CurvePoint[];
+}
+
+export const DEFAULT_CURVE: ClipCurve = Object.freeze({
+  points: Object.freeze([
+    Object.freeze({ x: 0, y: 0 }),
+    Object.freeze({ x: 100, y: 100 }),
+  ]),
+});
+
+/* ============================================================
    CLIP COLOR
    ------------------------------------------------------------
    Color correction properti. Default = neutral (tidak ada
@@ -111,13 +133,17 @@ export interface ClipColor {
   readonly contrast: number; // -100..100 → contrast 0.5..1.5
   readonly saturation: number; // 0..200   → saturate 0..2
   readonly temp: number; // -100..100 → overlay cool/warm tint
+  readonly curve: ClipCurve;
 }
+/* Keys dengan value numeric (exclude curve yang object). */
+export type NumericClipColorKey = Exclude<keyof ClipColor, "curve">;
 
 export const DEFAULT_CLIP_COLOR: ClipColor = Object.freeze({
   exposure: 0,
   contrast: 0,
   saturation: 100,
   temp: 0,
+  curve: DEFAULT_CURVE,
 });
 
 /* ============================================================

@@ -44,6 +44,7 @@ import {
   Sun,
   ArrowDown,
   Columns2,
+  Minimize,
   type IconNode,
   DiamondMinus,
 } from "lucide";
@@ -118,6 +119,7 @@ const ICONS = {
   check: Check,
   alert: AlertTriangle,
   x: X,
+  minimize: Minimize,
 
   /* Transitions — extended */
   sun: Sun,

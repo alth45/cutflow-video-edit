@@ -21,6 +21,10 @@ export interface PreviewView {
   readonly fadeOverlay: HTMLElement;
   readonly selectionOverlay: HTMLElement;
   readonly playOverlay: HTMLElement;
+  readonly btnVolume: HTMLButtonElement;
+  readonly volumeIconSvg: SVGElement;
+  readonly btnFullscreen: HTMLButtonElement;
+  readonly fullscreenIconSvg: SVGElement;
   readonly btnPlay: HTMLButtonElement;
   readonly playIconSvg: SVGElement;
   readonly btnBigPlay: HTMLButtonElement;
@@ -53,16 +57,23 @@ export function renderPreview(state: AppState): PreviewView {
   seqTitle.append(seqMeta);
 
   const headActions = el("div", { className: "actions" });
+
+  const muted = state.playback.muted;
   const volBtn = el("button", {
-    className: "icon-btn",
-    attrs: { title: "Volume" },
+    className: `icon-btn${muted ? " active" : ""}`,
+    attrs: { title: muted ? "Unmute" : "Mute" },
   });
-  volBtn.append(createIcon("volume"));
+  const volumeIconSvg = createIcon(muted ? "volume-muted" : "volume");
+  volBtn.append(volumeIconSvg);
+
+  const fsActive = state.ui.layout.previewFullscreen;
   const fsBtn = el("button", {
-    className: "icon-btn",
-    attrs: { title: "Fullscreen" },
+    className: `icon-btn${fsActive ? " active" : ""}`,
+    attrs: { title: fsActive ? "Exit fullscreen" : "Fullscreen" },
   });
-  fsBtn.append(createIcon("fullscreen"));
+  const fullscreenIconSvg = createIcon(fsActive ? "minimize" : "fullscreen");
+  fsBtn.append(fullscreenIconSvg);
+
   headActions.append(volBtn, fsBtn);
   head.append(seqTitle, headActions);
 
@@ -195,6 +206,10 @@ export function renderPreview(state: AppState): PreviewView {
     fadeOverlay,
     selectionOverlay,
     playOverlay,
+    btnVolume: volBtn,
+    volumeIconSvg,
+    btnFullscreen: fsBtn,
+    fullscreenIconSvg,
     btnPlay,
     playIconSvg,
     btnBigPlay,

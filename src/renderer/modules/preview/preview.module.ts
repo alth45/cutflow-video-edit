@@ -8,7 +8,7 @@ import { renderComposite } from "./preview.composite";
 import { syncAudio } from "./preview.audio-sync";
 import { attachOverlayDrag } from "./preview.overlay-drag";
 import { attachOverlayResize } from "./preview.overlay-resize";
-import { renderPreview } from "./preview.view";
+import { renderPreview, type PreviewView } from "./preview.view";
 import { AudioEngine } from "./audio-engine";
 
 /* ============================================================
@@ -52,6 +52,18 @@ export function mountPreview(container: HTMLElement): () => void {
       view.btnPlay.setAttribute("aria-label", playing ? "Pause" : "Play");
       if (playing) ticker.start();
       else ticker.stop();
+    }
+
+    /* Volume mute state → icon + tooltip */
+    if (state.playback.muted !== prev.playback.muted) {
+      syncVolumeButton(view, state.playback.muted);
+    }
+
+    /* Fullscreen state → icon + tooltip */
+    if (
+      state.ui.layout.previewFullscreen !== prev.ui.layout.previewFullscreen
+    ) {
+      syncFullscreenButton(view, state.ui.layout.previewFullscreen);
     }
 
     /* Sequence meta (duration, fps) */
@@ -109,4 +121,23 @@ export function mountPreview(container: HTMLElement): () => void {
     audioEngine.dispose();
     container.replaceChildren();
   };
+}
+
+/* ============================================================
+   HEADER BUTTON SYNC
+   ============================================================ */
+
+function syncVolumeButton(view: PreviewView, muted: boolean): void {
+  setIconPath(view.volumeIconSvg, muted ? "volume-muted" : "volume");
+  view.btnVolume.classList.toggle("active", muted);
+  view.btnVolume.setAttribute("title", muted ? "Unmute" : "Mute");
+}
+
+function syncFullscreenButton(view: PreviewView, active: boolean): void {
+  setIconPath(view.fullscreenIconSvg, active ? "minimize" : "fullscreen");
+  view.btnFullscreen.classList.toggle("active", active);
+  view.btnFullscreen.setAttribute(
+    "title",
+    active ? "Exit fullscreen" : "Fullscreen",
+  );
 }

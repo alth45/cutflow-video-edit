@@ -12,6 +12,7 @@ import {
 } from "@modules/effects/effect.logic";
 import { ensureChromaFilter } from "./preview.chroma";
 import type { TransitionSample } from "./preview.logic";
+import { curveFilterPart } from "./preview.curve";
 /* ============================================================
    VISUAL TRANSFORM
    ------------------------------------------------------------
@@ -65,17 +66,19 @@ export function applyVisualTransform(
   }
 
   /* Filter chain: chroma → color/effects → transition blur */
+  /* Filter chain: transition blur → chroma → color/effects → curve */
   const filterParts: string[] = [];
+  if (sample.blurPx && sample.blurPx > 0) {
+    filterParts.push(`blur(${sample.blurPx.toFixed(1)}px)`);
+  }
   if (clip.chromaKey?.enabled) {
-    // const { ensureChromaFilter } =
-    // require("./preview.chroma") as typeof import("./preview.chroma");
-    filterParts.push(`url(#${ensureChromaFilter(clip.id, clip.chromaKey)})`);
+    const id = ensureChromaFilter(clip.id, clip.chromaKey);
+    filterParts.push(`url(#${id})`);
   }
   const colorFx = buildFilterString(clip);
   if (colorFx) filterParts.push(colorFx);
-  if (sample.blurPx && sample.blurPx > 0) {
-    filterParts.unshift(`blur(${sample.blurPx.toFixed(1)}px)`);
-  }
+  const curveFx = curveFilterPart(clip.id, clip.color?.curve);
+  if (curveFx) filterParts.push(curveFx);
   wrapper.style.filter = filterParts.join(" ") || "";
 
   /* Vignette */

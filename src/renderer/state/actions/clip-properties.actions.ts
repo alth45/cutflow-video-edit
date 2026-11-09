@@ -9,11 +9,14 @@ import type {
   ClipTransform,
   ClipColor,
   ClipAudio,
+  NumericClipColorKey,
 } from "@shared/types/timeline";
 import { withProject } from "./helpers";
 
 import { DEFAULT_CHROMA_KEY } from "@shared/types/timeline";
 import type { ClipChromaKey } from "@shared/types/timeline";
+import type { CurvePoint, ClipCurve } from "@shared/types/timeline";
+import { DEFAULT_CURVE } from "@shared/types/timeline";
 
 function patchClip(clipId: string, updater: (clip: Clip) => Clip | null): void {
   appStore.setState((state) => {
@@ -75,7 +78,7 @@ export function setClipTransformBulk(
   });
 }
 
-export function setClipColorProperty<K extends keyof ClipColor>(
+export function setClipColorProperty<K extends NumericClipColorKey>(
   clipId: string,
   key: K,
   value: ClipColor[K],
@@ -99,8 +102,7 @@ export function setClipAudioProperty<K extends keyof ClipAudio>(
   });
 }
 
-
- export function setClipChromaKey<K extends keyof ClipChromaKey>(
+export function setClipChromaKey<K extends keyof ClipChromaKey>(
   clipId: string,
   key: K,
   value: ClipChromaKey[K],
@@ -109,5 +111,41 @@ export function setClipAudioProperty<K extends keyof ClipAudio>(
     const current = clip.chromaKey ?? DEFAULT_CHROMA_KEY;
     if (current[key] === value) return null;
     return { ...clip, chromaKey: { ...current, [key]: value } };
+  });
+}
+
+/**
+ * Set curve points. Sanity: sort by x, clamp 0..100. Skip if same
+ * as current (no-op). 1 history entry per call.
+ */
+export function setClipCurve(
+  clipId: string,
+  points: readonly CurvePoint[],
+): void {
+  if (points.length < 2) return;
+
+  patchClip(clipId, (clip) => {
+    const sorted = [...points]
+      .map((p) => ({
+        x: Math.max(0, Math.min(100, p.x)),
+        y: Math.max(0, Math.min(100, p.y)),
+      }))
+      .sort((a, b) => a.x - b.x);
+
+    const current = clip.color ?? DEFAULT_CLIP_COLOR;
+    const currentPoints = current.curve?.points ?? DEFAULT_CURVE.points;
+
+    /* No-op check. */
+    if (currentPoints.length === sorted.length) {
+      const same = currentPoints.every(
+        (p, i) =>
+          Math.abs(p.x - sorted[i]!.x) < 0.01 &&
+          Math.abs(p.y - sorted[i]!.y) < 0.01,
+      );
+      if (same) return null;
+    }
+
+    const nextCurve: ClipCurve = { points: sorted };
+    return { ...clip, color: { ...current, curve: nextCurve } };
   });
 }

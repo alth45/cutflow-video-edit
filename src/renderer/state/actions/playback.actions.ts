@@ -3,13 +3,19 @@ import { appStore } from "@state/appStore";
 export function togglePlay(): void {
   appStore.setState((state) => {
     if (state.playback.playing) {
-      return { ...state, playback: { ...state.playback, playing: false } };
+      return {
+        ...state,
+        playback: { ...state.playback, playing: false },
+      };
     }
     const duration = state.project.sequence.durationSec;
     const frameSec = 1 / state.project.sequence.fps;
     const atEnd = state.playback.currentTimeSec >= duration - frameSec;
     const startFrom = atEnd ? 0 : state.playback.currentTimeSec;
-    return { ...state, playback: { playing: true, currentTimeSec: startFrom } };
+    return {
+      ...state,
+      playback: { ...state.playback, playing: true, currentTimeSec: startFrom },
+    };
   });
 }
 
@@ -56,5 +62,16 @@ export function goToEnd(): void {
       ...state.playback,
       currentTimeSec: state.project.sequence.durationSec,
     },
+  }));
+}
+
+/**
+ * Toggle master mute (audio playback only — tidak affect export).
+ * Video embedded audio + audio clips semua mute/unmute.
+ */
+export function togglePlaybackMuted(): void {
+  appStore.setState((state) => ({
+    ...state,
+    playback: { ...state.playback, muted: !state.playback.muted },
   }));
 }

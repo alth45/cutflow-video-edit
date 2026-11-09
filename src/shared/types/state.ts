@@ -58,6 +58,7 @@ export interface PlaybackState {
   readonly playing: boolean;
   /** Posisi playhead dalam detik. Range: [0, sequence.durationSec]. */
   readonly currentTimeSec: number;
+  readonly muted: boolean; 
 }
 
 /* ============================================================

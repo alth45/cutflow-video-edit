@@ -6,8 +6,8 @@ Dibuat otomatis untuk memberikan gambaran ukuran basis kode project **cutflow**.
 
 | Metrik | Nilai |
 |--------|-------|
-| **Total Baris Kode** | **23,337 baris** |
-| **Total File** | **114 file** |
+| **Total Baris Kode** | **25,345 baris** |
+| **Total File** | **137 file** |
 | **Directori yang Dihitung** | `src/`, root config files |
 | **Dikecualikan** | `node_modules/`, `.git/`, `out/` |
 
@@ -15,12 +15,12 @@ Dibuat otomatis untuk memberikan gambaran ukuran basis kode project **cutflow**.
 
 | Ekstensi | Jumlah File | Total Baris | Persentase |
 |----------|-------------|-------------|------------|
-| `.ts` | 92 | 14,427 | 61.8% |
-| `.css` | 13 | 4,115 | 17.6% |
-| `.json` | 5 | 4,098 | 17.6% |
-| `.md` | 3 | 615 | 2.6% |
-| `.html` | 1 | 82 | 0.4% |
-| **Total** | **114** | **23,337** | **100%** |
+| `.ts` | 113 | 15,784 | 62.3% |
+| `.css` | 14 | 4,474 | 17.7% |
+| `.json` | 5 | 4,262 | 16.8% |
+| `.md` | 4 | 743 | 2.9% |
+| `.html` | 1 | 82 | 0.3% |
+| **Total** | **137** | **25,345** | **100%** |
 
 ## 📁 Struktur Direktori Utama
 

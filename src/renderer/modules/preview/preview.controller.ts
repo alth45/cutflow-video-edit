@@ -40,6 +40,16 @@ export function attachPreviewController(view: PreviewView): () => void {
   cleanups.push(on(view.btnStepBack, "click", () => actions.stepFrame(-1)));
   cleanups.push(on(view.btnStepFwd, "click", () => actions.stepFrame(1)));
 
+  /* ---- Volume (master mute) ---- */
+  cleanups.push(
+    on(view.btnVolume, "click", () => actions.togglePlaybackMuted()),
+  );
+
+  /* ---- Fullscreen (preview-only) ---- */
+  cleanups.push(
+    on(view.btnFullscreen, "click", () => actions.togglePreviewFullscreen()),
+  );
+
   /* Global keyboard: Space untuk play/pause.
      Skip saat fokus di input/textarea/contenteditable —
      user sedang mengetik, tidak ingin mengganggu.

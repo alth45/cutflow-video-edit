@@ -70,12 +70,13 @@ export function createInitialState(): AppState {
     playback: {
       playing: false,
       currentTimeSec: 0,
+      muted: false,
     },
     ui: {
       media: {
         activeTab: "media-bin",
         searchQuery: "",
-        selectedAssetIds: [], 
+        selectedAssetIds: [],
       },
       inspector: {
         activeTab: "insp-video",

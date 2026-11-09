@@ -7,6 +7,7 @@ import {
   DEFAULT_TEXT_STYLE,
 } from "@shared/types/timeline";
 import { DEFAULT_CHROMA_KEY } from "@shared/types/timeline";
+import { DEFAULT_CURVE } from "@shared/types/timeline";
 /* ============================================================
    PROJECT SERIALIZER
    ------------------------------------------------------------
@@ -112,6 +113,14 @@ export function parseProject(json: string): ParseProjectResult {
           if (!("animation" in patched)) patched["animation"] = null;
           if (!("chromaKey" in patched))
             patched["chromaKey"] = DEFAULT_CHROMA_KEY;
+          /* Color: normalize curve if missing. */
+          if (patched["color"] && typeof patched["color"] === "object") {
+            const color = { ...(patched["color"] as Record<string, unknown>) };
+            if (!color["curve"]) {
+              color["curve"] = DEFAULT_CURVE;
+              patched["color"] = color;
+            }
+          }
 
           /* Text clip backward compat: normalize missing style. */
           const source = patched["source"];

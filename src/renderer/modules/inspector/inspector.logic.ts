@@ -16,6 +16,7 @@ import type {
   ClipColor,
   ClipAudio,
   ClipChromaKey,
+  NumericClipColorKey,
 } from "@shared/types/timeline";
 import type { KeyframeableTransformKey } from "@shared/types/timeline";
 
@@ -52,7 +53,7 @@ export interface SliderRow {
   readonly step?: number;
   readonly format: ValueFormatter;
   readonly transformKey?: keyof ClipTransform;
-  readonly colorKey?: keyof ClipColor;
+  readonly colorKey?: NumericClipColorKey;
   readonly audioKey?: keyof ClipAudio;
   readonly chromaKey?: "similarity";
   readonly keyframeKey?: KeyframeableTransformKey;

@@ -24,6 +24,13 @@ import {
   DEFAULT_CHROMA_KEY,
 } from "@shared/types/timeline";
 import { type SegmentedRow } from "./inspector.logic";
+import { curveToPath } from "@modules/effects/curve.logic";
+import { DEFAULT_CURVE, type ClipCurve } from "@shared/types/timeline";
+import {
+  ensureCurveFilter,
+  curveFilterPart,
+} from "@modules/preview/preview.curve";
+
 export interface SliderRef {
   readonly input: HTMLInputElement;
   readonly valueEl: HTMLElement;
@@ -194,7 +201,7 @@ function renderRow(
     case "segmented":
       return renderSegmentedRow(row, activeClip);
     case "curve":
-      return renderCurveRow();
+      return renderCurveRow(activeClip);
   }
 }
 
@@ -347,17 +354,46 @@ function renderSwitchRow(
   return wrap;
 }
 
-function renderCurveRow(): HTMLElement {
-  const box = el("div", { className: "curve-box" });
-  box.innerHTML = `
-    <svg viewBox="0 0 100 74" preserveAspectRatio="none">
-      <line x1="0" y1="37" x2="100" y2="37" stroke="#1d2432" stroke-width="1"/>
-      <line x1="50" y1="0" x2="50" y2="74" stroke="#1d2432" stroke-width="1"/>
-      <path d="M0 74 C 28 66, 44 40, 62 24 S 88 6, 100 0"
-            fill="none" stroke="#7c5cff" stroke-width="2" stroke-linecap="round"/>
-      <circle cx="62" cy="24" r="3" fill="#fff" stroke="#7c5cff" stroke-width="2"/>
-    </svg>
+function renderCurveRow(activeClip: Clip | undefined): HTMLElement {
+  const box = el('div', { className: 'curve-box' });
+  if (activeClip) {
+    box.dataset['clipId'] = activeClip.id;
+  }
+
+  const curve: ClipCurve = activeClip?.color?.curve ?? DEFAULT_CURVE;
+  const points = curve.points;
+
+  /* SVG path (background grid + curve) */
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 100 74');
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.classList.add('curve-svg');
+  svg.innerHTML = `
+    <line x1="0" y1="37" x2="100" y2="37" stroke="#1d2432" stroke-width="1"/>
+    <line x1="50" y1="0" x2="50" y2="74" stroke="#1d2432" stroke-width="1"/>
+    <path d="${curveToPath(points, 74)}"
+          fill="none" stroke="#7c5cff" stroke-width="2"
+          stroke-linecap="round" vector-effect="non-scaling-stroke"/>
   `;
+  box.append(svg);
+
+  /* Interactive points layer (HTML divs for easy hit-area) */
+  const pointsLayer = el('div', { className: 'curve-points' });
+  points.forEach((p, i) => {
+    const pt = el('div', { className: 'curve-point' });
+    pt.dataset['index'] = String(i);
+    pt.style.left = `${p.x}%`;
+    pt.style.top = `${100 - p.y}%`;
+    pt.title = `${Math.round(p.x)} → ${Math.round(p.y)} (double-click to remove)`;
+    pointsLayer.append(pt);
+  });
+  box.append(pointsLayer);
+
+  /* Preload filter so preview applies immediately. */
+  if (activeClip?.color?.curve) {
+    curveFilterPart(activeClip.id, activeClip.color.curve);
+  }
+
   return box;
 }
 

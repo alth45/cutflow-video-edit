@@ -15,6 +15,10 @@ import {
 } from "@shared/types/timeline";
 import { sliderPercent } from "./inspector.logic";
 import type { InspectorView } from "./inspector.view";
+import type { CurvePoint } from "@shared/types/timeline";
+import { DEFAULT_CURVE } from "@shared/types/timeline";
+import { ensureCurveFilter } from "@modules/preview/preview.curve";
+import { curveToPath } from "@modules/effects/curve.logic";
 
 /* ============================================================
    HELPERS
@@ -190,6 +194,157 @@ export function attachInspectorController(view: InspectorView): () => void {
       actions.toggleTransformKeyframe(clip.id, key, getPlayheadLocalTime(clip));
     }),
   );
+
+  /* ---- Curve editor (interactive) ---- */
+
+  interface CurveDrag {
+    readonly clipId: string;
+    readonly box: HTMLElement;
+    readonly index: number;
+    points: CurvePoint[];
+  }
+  let curveDrag: CurveDrag | null = null;
+
+  const updateCurveDom = (drag: CurveDrag): void => {
+    const pathEl = drag.box.querySelector<SVGPathElement>(
+      ".curve-path, .curve-svg path",
+    );
+    if (pathEl) pathEl.setAttribute("d", curveToPath(drag.points, 74));
+
+    const pointsLayer = drag.box.querySelector<HTMLElement>(".curve-points");
+    if (pointsLayer) {
+      pointsLayer.replaceChildren();
+      drag.points.forEach((p, i) => {
+        const pt = document.createElement("div");
+        pt.className = "curve-point";
+        pt.dataset["index"] = String(i);
+        pt.style.left = `${p.x}%`;
+        pt.style.top = `${100 - p.y}%`;
+        pt.title = `${Math.round(p.x)} → ${Math.round(p.y)}`;
+        pointsLayer.appendChild(pt);
+      });
+    }
+
+    /* Live preview — update filter imperatively. */
+    ensureCurveFilter(drag.clipId, { points: drag.points });
+  };
+
+  const clamp = (v: number, min: number, max: number): number =>
+    Math.max(min, Math.min(max, v));
+
+  const onCurveMouseDown = (ev: MouseEvent, box: HTMLElement): void => {
+    if (ev.button !== 0) return;
+
+    const state = appStore.getState();
+    const activeClip = getActiveClipFromStore();
+    if (!activeClip) return;
+
+    /* Pause playback — avoids re-render loop mid-drag. */
+    if (state.playback.playing) actions.setPlaying(false);
+
+    const rect = box.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+
+    const target = ev.target as Element;
+    const pointEl = target.closest<HTMLElement>(".curve-point");
+
+    const points: CurvePoint[] = [
+      ...(activeClip.color?.curve?.points ?? DEFAULT_CURVE.points),
+    ];
+
+    let dragIndex: number;
+
+    if (pointEl) {
+      dragIndex = Number(pointEl.dataset["index"]);
+    } else {
+      /* Add new point at click position. */
+      const x = clamp(((ev.clientX - rect.left) / rect.width) * 100, 0, 100);
+      const y = clamp(
+        100 - ((ev.clientY - rect.top) / rect.height) * 100,
+        0,
+        100,
+      );
+      const newPt: CurvePoint = { x, y };
+      points.push(newPt);
+      points.sort((a, b) => a.x - b.x);
+      dragIndex = points.indexOf(newPt);
+    }
+
+    curveDrag = {
+      clipId: activeClip.id,
+      box,
+      index: dragIndex,
+      points: [...points],
+    };
+
+    document.addEventListener("mousemove", onCurveMouseMove);
+    document.addEventListener("mouseup", onCurveMouseUp);
+    ev.preventDefault();
+    ev.stopPropagation();
+  };
+
+  const onCurveMouseMove = (ev: MouseEvent): void => {
+    if (!curveDrag) return;
+
+    const rect = curveDrag.box.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+
+    const rawX = ((ev.clientX - rect.left) / rect.width) * 100;
+    const rawY = 100 - ((ev.clientY - rect.top) / rect.height) * 100;
+
+    const idx = curveDrag.index;
+    const pts = curveDrag.points;
+    const isFirst = idx === 0;
+    const isLast = idx === pts.length - 1;
+
+    if (isFirst) {
+      pts[idx] = { x: 0, y: clamp(rawY, 0, 100) };
+    } else if (isLast) {
+      pts[idx] = { x: 100, y: clamp(rawY, 0, 100) };
+    } else {
+      const minX = pts[idx - 1]!.x + 1;
+      const maxX = pts[idx + 1]!.x - 1;
+      pts[idx] = { x: clamp(rawX, minX, maxX), y: clamp(rawY, 0, 100) };
+    }
+
+    updateCurveDom(curveDrag);
+  };
+
+  const onCurveMouseUp = (): void => {
+    if (!curveDrag) return;
+    const { clipId, points } = curveDrag;
+
+    document.removeEventListener("mousemove", onCurveMouseMove);
+    document.removeEventListener("mouseup", onCurveMouseUp);
+    curveDrag = null;
+
+    actions.setClipCurve(clipId, points);
+  };
+
+  cleanups.push(
+    delegate(view.root, "mousedown", ".curve-box", (ev, boxEl) => {
+      onCurveMouseDown(ev, boxEl as HTMLElement);
+    }),
+  );
+
+  cleanups.push(
+    delegate(view.root, "dblclick", ".curve-point", (ev, pointEl) => {
+      ev.stopPropagation();
+      const idx = Number((pointEl as HTMLElement).dataset["index"]);
+      const clip = getActiveClipFromStore();
+      if (!clip) return;
+
+      const points = [...(clip.color?.curve?.points ?? DEFAULT_CURVE.points)];
+      if (idx === 0 || idx === points.length - 1) return; /* endpoints locked */
+      points.splice(idx, 1);
+      actions.setClipCurve(clip.id, points);
+    }),
+  );
+
+  cleanups.push(() => {
+    document.removeEventListener("mousemove", onCurveMouseMove);
+    document.removeEventListener("mouseup", onCurveMouseUp);
+  });
 
   return () => cleanups.forEach((fn) => fn());
 }
