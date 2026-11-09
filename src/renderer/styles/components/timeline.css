@@ -958,3 +958,16 @@
   cursor: not-allowed;
   pointer-events: none;
 }
+
+/* ============================================================
+   NESTED CLIP (F14at)
+   ============================================================ */
+.clip.nested {
+  /* Dashed accent border menandakan "group/container". */
+  outline: 1px dashed rgba(124, 92, 255, 0.65);
+  outline-offset: -2px;
+}
+
+.clip.nested .clip-label svg {
+  color: #c4b6ff;
+}

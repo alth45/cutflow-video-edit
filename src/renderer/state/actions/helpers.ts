@@ -82,7 +82,12 @@ export function isClipCompatible(
   clipKind: ClipKind,
 ): boolean {
   if (trackKind === "audio") return clipKind === "audio";
-  return clipKind === "video" || clipKind === "text" || clipKind === "shape";
+  return (
+    clipKind === "video" ||
+    clipKind === "text" ||
+    clipKind === "shape" ||
+    clipKind === "nested"
+  );
 }
 
 export function getAppState(): AppState {

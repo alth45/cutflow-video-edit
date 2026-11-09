@@ -110,5 +110,7 @@ function cloneWithNewPosition(
       return { ...clip, ...base };
     case "shape":
       return { ...clip, ...base };
+    case "nested":
+      return { ...clip, ...base };
   }
 }

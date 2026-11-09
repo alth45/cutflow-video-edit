@@ -113,9 +113,31 @@ function handleAction(id: MenuActionId): void {
       toast("Click a junction between clips to add a transition", "info");
       return;
 
-    case "clip:nest":
-      toast("Nest clip coming soon", "info");
+    case "clip:nest": {
+      const selection = appStore.getState().selection.selectedClipIds;
+      const result = actions.nestClips(selection);
+      if (!result.ok) {
+        toast(result.error, "warning");
+        return;
+      }
+      toast(`Nested ${result.clipCount} clips`, "success");
       return;
+    }
+
+    case "clip:unnest": {
+      const selection = appStore.getState().selection.selectedClipIds;
+      if (selection.length !== 1) {
+        toast("Select a single nested clip", "warning");
+        return;
+      }
+      const result = actions.unnestClip(selection[0]!);
+      if (!result.ok) {
+        toast(result.error, "warning");
+        return;
+      }
+      toast(`Un-nested to ${result.clipCount} clips`, "success");
+      return;
+    }
 
     /* ---- SEQUENCE ---- */
     case "seq:render":

@@ -28,6 +28,7 @@ export type MenuActionId =
   | "clip:speed"
   | "clip:transition"
   | "clip:nest"
+  | "clip:unnest"
   | "seq:render"
   | "seq:settings"
   | "seq:add-track"
@@ -154,6 +155,7 @@ export const MENU_DEFINITIONS: readonly MenuDefinition[] = [
         shortcut: "Ctrl+D",
       },
       { kind: "action", id: "clip:nest", label: "Nest Clip" },
+      { kind: "action", id: "clip:unnest", label: "Un-nest Clip" },
     ],
   },
   {

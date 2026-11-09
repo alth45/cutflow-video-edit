@@ -27,6 +27,61 @@ export type ParseProjectResult =
   | { readonly ok: true; readonly project: Project }
   | { readonly ok: false; readonly error: string };
 
+/* ============================================================
+   RECURSIVE CLIP NORMALIZER (F14at — supports nested)
+   ============================================================ */
+function normalizeClipRecord(c: unknown): unknown {
+  if (!c || typeof c !== "object") return c;
+  const clip = c as Record<string, unknown>;
+  const patched: Record<string, unknown> = { ...clip };
+
+  if (!patched["transform"]) patched["transform"] = DEFAULT_CLIP_TRANSFORM;
+  if (!patched["color"]) patched["color"] = DEFAULT_CLIP_COLOR;
+  if (!patched["audio"]) patched["audio"] = DEFAULT_CLIP_AUDIO;
+  if (!patched["effects"]) patched["effects"] = [];
+  if (!patched["keyframes"]) patched["keyframes"] = {};
+  if (!("animation" in patched)) patched["animation"] = null;
+  if (!("chromaKey" in patched)) patched["chromaKey"] = DEFAULT_CHROMA_KEY;
+
+  const source = patched["source"];
+  if (source && typeof source === "object") {
+    const src = source as Record<string, unknown>;
+    const kind = src["kind"];
+
+    /* Text source: default style. */
+    if (kind === "text" && !src["style"]) {
+      patched["source"] = { ...src, style: DEFAULT_TEXT_STYLE };
+    }
+
+    /* Shape source: default style fields. */
+    if (kind === "shape") {
+      const s: Record<string, unknown> = { ...src };
+      if (!s["fillColor"]) s["fillColor"] = DEFAULT_SHAPE_STYLE.fillColor;
+      if (!s["strokeColor"]) s["strokeColor"] = DEFAULT_SHAPE_STYLE.strokeColor;
+      if (s["strokeWidth"] === undefined)
+        s["strokeWidth"] = DEFAULT_SHAPE_STYLE.strokeWidth;
+      patched["source"] = s;
+    }
+
+    /* Nested source: recursively normalize inner tracks + clips. */
+    if (kind === "nested") {
+      const rawTracks = Array.isArray(src["tracks"]) ? src["tracks"] : [];
+      const normalizedTracks = rawTracks.map((t) => {
+        if (!t || typeof t !== "object") return t;
+        const track = t as Record<string, unknown>;
+        const rawClips = Array.isArray(track["clips"]) ? track["clips"] : [];
+        const normalizedClips = rawClips.map((innerClip) =>
+          normalizeClipRecord(innerClip),
+        );
+        return { ...track, clips: normalizedClips };
+      });
+      patched["source"] = { ...src, tracks: normalizedTracks };
+    }
+  }
+
+  return patched;
+}
+
 export function parseProject(json: string): ParseProjectResult {
   let data: unknown;
   try {
@@ -96,64 +151,7 @@ export function parseProject(json: string): ParseProjectResult {
     const clipsRaw = track["clips"];
 
     const clips = Array.isArray(clipsRaw)
-      ? clipsRaw.map((c) => {
-          if (!c || typeof c !== "object") return c;
-          const clip = c as Record<string, unknown>;
-          const patched: Record<string, unknown> = { ...clip };
-          if (!patched["transform"])
-            patched["transform"] = DEFAULT_CLIP_TRANSFORM;
-          if (!patched["color"]) patched["color"] = DEFAULT_CLIP_COLOR;
-          if (!patched["audio"]) {
-            patched["audio"] = DEFAULT_CLIP_AUDIO;
-          } else {
-            const existingAudio = patched["audio"] as Record<string, unknown>;
-            patched["audio"] = { ...DEFAULT_CLIP_AUDIO, ...existingAudio };
-          }
-          if (!patched["effects"]) patched["effects"] = [];
-          if (!patched["keyframes"]) patched["keyframes"] = {};
-          if (!("animation" in patched)) patched["animation"] = null;
-          if (!("chromaKey" in patched))
-            patched["chromaKey"] = DEFAULT_CHROMA_KEY;
-          /* Color: normalize curve if missing. */
-          if (patched["color"] && typeof patched["color"] === "object") {
-            const color = { ...(patched["color"] as Record<string, unknown>) };
-            if (!color["curve"]) {
-              color["curve"] = DEFAULT_CURVE;
-              patched["color"] = color;
-            }
-          }
-
-          /* Text clip backward compat: normalize missing style. */
-          const source = patched["source"];
-          if (
-            source &&
-            typeof source === "object" &&
-            (source as Record<string, unknown>)["kind"] === "text"
-          ) {
-            const src = source as Record<string, unknown>;
-            if (!src["style"]) {
-              patched["source"] = { ...src, style: DEFAULT_TEXT_STYLE };
-            }
-          }
-          /* Shape source: normalize style defaults jika field hilang. */
-          if (
-            source &&
-            typeof source === "object" &&
-            (source as Record<string, unknown>)["kind"] === "shape"
-          ) {
-            const src = source as Record<string, unknown>;
-            const patchedSrc: Record<string, unknown> = { ...src };
-            if (!patchedSrc["fillColor"])
-              patchedSrc["fillColor"] = DEFAULT_SHAPE_STYLE.fillColor;
-            if (!patchedSrc["strokeColor"])
-              patchedSrc["strokeColor"] = DEFAULT_SHAPE_STYLE.strokeColor;
-            if (patchedSrc["strokeWidth"] === undefined)
-              patchedSrc["strokeWidth"] = DEFAULT_SHAPE_STYLE.strokeWidth;
-            patched["source"] = patchedSrc;
-          }
-
-          return patched;
-        })
+      ? clipsRaw.map((c) => normalizeClipRecord(c))
       : clipsRaw;
 
     return { ...track, clips, transitions };

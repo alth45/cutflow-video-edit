@@ -52,6 +52,7 @@ import {
   Star,
   SquarePause,
   Shapes,
+  Layers,
   type IconNode,
   DiamondMinus,
 } from "lucide";
@@ -133,6 +134,7 @@ const ICONS = {
   minus: Minus,
   star: Star,
   square: SquarePause,
+  layers: Layers,
 
   shapes: Shapes,
   /* Transitions — extended */

@@ -142,10 +142,18 @@ export function updateClipInactive(
 ): void {
   const kind = activeClip?.kind;
 
-  /* Relevance per tab berdasarkan clip kind. */
-  const videoActive = kind === "video" || kind === "text";
+  /* Nested clip: no direct editable properties — un-nest to edit inner
+     clips. Disable all tabs. */
+  if (kind === "nested") {
+    view.panes.get("insp-video")?.classList.add("clip-inactive");
+    view.panes.get("insp-audio")?.classList.add("clip-inactive");
+    view.panes.get("insp-color")?.classList.add("clip-inactive");
+    return;
+  }
+
+  const videoActive = kind === "video" || kind === "text" || kind === "shape";
   const audioActive = kind === "audio" || kind === "video";
-  const colorActive = kind === "video" || kind === "text";
+  const colorActive = kind === "video" || kind === "text" || kind === "shape";
 
   view.panes.get("insp-video")?.classList.toggle("clip-inactive", !videoActive);
   view.panes.get("insp-audio")?.classList.toggle("clip-inactive", !audioActive);

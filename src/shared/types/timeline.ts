@@ -33,7 +33,7 @@
    actions saat add clip (F5), bukan oleh tipe (untuk simplisitas).
    ============================================================ */
 export type TrackKind = "video" | "audio";
-export type ClipKind = "video" | "audio" | "text" | "shape";
+export type ClipKind = "video" | "audio" | "text" | "shape" | "nested";
 /* ============================================================
    COLOR TOKEN
    ------------------------------------------------------------
@@ -201,6 +201,23 @@ export const DEFAULT_SHAPE_STYLE = Object.freeze({
   strokeWidth: 2,
 });
 
+/* ============================================================
+   NESTED CLIP (F14at)
+   ------------------------------------------------------------
+   Group clip — berisi sub-tracks dengan clip-clip yang di-nest.
+   Inline storage (bukan referensi ke Sequence) untuk MVP —
+   nested clip bawa sumbernya sendiri, no lookup ID.
+   ============================================================ */
+export interface NestedClipSource {
+  readonly kind: "nested";
+  readonly tracks: readonly Track[];
+  readonly durationSec: number;
+}
+
+export interface NestedClip extends ClipBase {
+  readonly kind: "nested";
+  readonly source: NestedClipSource;
+}
 /* ============================================================
    CHROMA KEY (F14ak)
    ------------------------------------------------------------
@@ -406,7 +423,7 @@ export interface TextClipSource {
   readonly style: TextClipStyle;
 }
 
-export type ClipSource = MediaClipSource | TextClipSource | ShapeClipSource;
+export type ClipSource = MediaClipSource | TextClipSource | ShapeClipSource | NestedClipSource;
 
 /* ============================================================
    CLIP
@@ -475,7 +492,7 @@ export interface ShapeClip extends ClipBase {
  *     case 'text' : /* TextClip   *\/
  *   }
  */
-export type Clip = VideoClip | AudioClip | TextClip | ShapeClip;
+export type Clip = VideoClip | AudioClip | TextClip | ShapeClip | NestedClip;
 
 /* ============================================================
    TRACK
