@@ -6,6 +6,9 @@ const DEV_SERVER_URL = process.env["ELECTRON_RENDERER_URL"];
 const RENDERER_HTML = join(__dirname, "../renderer/index.html");
 const PRELOAD_SCRIPT = join(__dirname, "../preload/index.cjs");
 //                                                      ^^^^^ .cjs
+const ICON_PATH = app.isPackaged
+  ? join(process.resourcesPath, "icon.png")
+  : join(__dirname, "../../resources/icon.png");
 
 export function createMainWindow(): BrowserWindow {
   const win = new BrowserWindow({
@@ -17,6 +20,7 @@ export function createMainWindow(): BrowserWindow {
     backgroundColor: "#0b0d12",
     title: "CutFlow",
     autoHideMenuBar: true,
+    icon: ICON_PATH,
 
     webPreferences: {
       preload: PRELOAD_SCRIPT,

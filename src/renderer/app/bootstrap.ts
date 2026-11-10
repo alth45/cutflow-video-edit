@@ -6,7 +6,6 @@ import { mountInspector } from "@modules/inspector/inspector.module";
 import { mountTimeline } from "@modules/timeline/timeline.module";
 import { mountKeyboard } from "@modules/keyboard/keyboard.module";
 import { mountToast } from "@modules/toast/toast.module";
-import { seedDemoMedia } from "@state/demo";
 import { appStore } from "@state/appStore";
 
 let shell: AppShell | null = null;
@@ -17,11 +16,6 @@ export function bootstrap(): void {
 
   /* Toast mounted first — capture errors from subsequent mounts. */
   cleanups.push(mountToast(document.body));
-
-  if (!window.cutflow.app.isPackaged) {
-    seedDemoMedia();
-    // seedDemoClips();
-  }
 
   shell = createAppShell();
 
